@@ -4,6 +4,6 @@ global using Magnar.AI.Application.Interfaces.Services;
 global using Magnar.AI.Domain.Entities;
 global using Magnar.AI.Infrastructure.Persistence;
 global using Microsoft.EntityFrameworkCore;
-global using Magnar.AI.Api.Static;
+global using Magnar.AI.Static;
 global using Microsoft.Extensions.Configuration;
 global using Magnar.AI.Application.Dto;

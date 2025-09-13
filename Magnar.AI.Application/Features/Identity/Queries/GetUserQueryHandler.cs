@@ -2,7 +2,7 @@
 
 namespace Magnar.Recruitment.Application.Features.Identity.Queries;
 
-public sealed record GetUserQuery(int UserId, int CompanyId)
+public sealed record GetUserQuery(int UserId)
     : IRequest<Result<ApplicationUserDto>>;
 
 public class GetUserQueryHandler : IRequestHandler<GetUserQuery, Result<ApplicationUserDto>>
@@ -21,7 +21,7 @@ public class GetUserQueryHandler : IRequestHandler<GetUserQuery, Result<Applicat
     public async Task<Result<ApplicationUserDto>> Handle(GetUserQuery request, CancellationToken cancellationToken)
     {
         ApplicationUser user = await unitOfWork.IdentityRepository.GetUserAsync(request.UserId, cancellationToken);
-        if (string.IsNullOrEmpty(user.Id))
+        if (user.Id == default)
         {
             throw new InvalidOperationException(Constants.Errors.UserNotFound);
         }

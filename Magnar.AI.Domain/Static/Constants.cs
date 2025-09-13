@@ -1,7 +1,7 @@
 ﻿using Magnar.AI.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
-namespace Magnar.AI.Api.Static;
+namespace Magnar.AI.Static;
 
 public static class Constants
 {

@@ -2,7 +2,6 @@
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using Duende.IdentityServer.Services;
-using Magnar.AI.Api.Static;
 using Magnar.AI.Application.Configuration;
 using Magnar.AI.Domain.Entities;
 using Magnar.AI.Exceptions;
@@ -15,9 +14,10 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.OData;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Serilog;
 
-namespace Magnar.AI.Api;
+namespace Magnar.AI;
 
 internal static class DependencyInjection
 {
@@ -125,24 +125,24 @@ internal static class DependencyInjection
     private static IServiceCollection ConfigureSwagger(this IServiceCollection services)
     {
         using ServiceProvider scope = services.BuildServiceProvider();
-        //SwaggerConfiguration swaggerConfig = scope.GetRequiredService<IOptions<SwaggerConfiguration>>().Value;
+        SwaggerConfiguration swaggerConfig = scope.GetRequiredService<IOptions<SwaggerConfiguration>>().Value;
 
-        //services.AddSwaggerGen(
-        //    opt =>
-        //    {
-        //        opt.SwaggerDoc(swaggerConfig.Version, new OpenApiInfo
-        //        {
-        //            Title = swaggerConfig.Title,
-        //            Description = swaggerConfig.Description,
-        //            Contact = new Microsoft.OpenApi.OpenApiContact
-        //            {
-        //                Name = swaggerConfig.Contact.Name,
-        //                Email = swaggerConfig.Contact.Email,
-        //                Url = new Uri(swaggerConfig.Contact.Url ?? string.Empty),
-        //            },
-        //        });
-        //    }
-        //);
+        services.AddSwaggerGen(
+            opt =>
+            {
+                opt.SwaggerDoc(swaggerConfig.Version, new OpenApiInfo
+                {
+                    Title = swaggerConfig.Title,
+                    Description = swaggerConfig.Description,
+                    Contact = new OpenApiContact
+                    {
+                        Name = swaggerConfig.Contact.Name,
+                        Email = swaggerConfig.Contact.Email,
+                        Url = new Uri(swaggerConfig.Contact.Url ?? string.Empty),
+                    },
+                });
+            }
+        );
 
         return services;
     }

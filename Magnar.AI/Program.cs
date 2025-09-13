@@ -1,13 +1,14 @@
 ﻿using DevExpress.AspNetCore;
 using DevExpress.DashboardAspNetCore;
 using DevExpress.DashboardWeb;
-using Magnar.AI.Api;
+using Magnar.AI;
 using Magnar.AI.Application;
 using Magnar.AI.Application.Dashboards;
 using Magnar.AI.Infrastructure.Extensions;
 using Magnar.Recruitment.Infrastructure;
 using Microsoft.SemanticKernel;
 using Serilog;
+using Magnar.AI.Extensions;
 
 public partial class Program
 {

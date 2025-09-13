@@ -19,7 +19,7 @@ public sealed class GetAccessTokenQueryHandler : IRequestHandler<GetAccessTokenQ
     public async Task<Result<AuthenticateResponse>> Handle(GetAccessTokenQuery request, CancellationToken cancellationToken)
     {
         ApplicationUser user = await unitOfWork.IdentityRepository.FindByNameOrEmailAsync(request.UserCredentials.UserName, cancellationToken);
-        if (string.IsNullOrEmpty(user.Id))
+        if (user.Id == default)
         {
             return Result<AuthenticateResponse>.CreateFailure([new(Constants.Errors.UserNotFound)]);
         }

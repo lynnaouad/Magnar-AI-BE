@@ -1,13 +1,10 @@
-﻿
-using Magnar.AI.Api.Controllers;
-
-using Magnar.AI.Application.Features.Identity.Commands;
+﻿using Magnar.AI.Application.Features.Identity.Commands;
 using Magnar.AI.Application.Features.Identity.Queries;
 using Magnar.AI.Application.Models.Responses;
 using Magnar.Recruitment.Application.Features.Identity.Queries;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Magnar.Recruitment.Api.Controllers;
+namespace Magnar.AI.Controllers;
 
 [Authorize]
 public sealed class AccountsController : BaseController
@@ -67,9 +64,9 @@ public sealed class AccountsController : BaseController
     [Route("users/{userId}")]
     [ProducesResponseType(typeof(ApplicationUserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error[]), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetUser([FromRoute] int userId, int companyId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetUser([FromRoute] int userId, CancellationToken cancellationToken)
     {
-        Result<ApplicationUserDto> result = await Mediator.Send(new GetUserQuery(userId, companyId), cancellationToken);
+        Result<ApplicationUserDto> result = await Mediator.Send(new GetUserQuery(userId), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -94,7 +91,7 @@ public sealed class AccountsController : BaseController
     [ProducesResponseType(typeof(Error[]), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto info, CancellationToken cancellationToken)
     {
-        Result<string> result = await Mediator.Send(new CreateUserCommand(info), cancellationToken);
+        var result = await Mediator.Send(new CreateUserCommand(info), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -160,9 +157,9 @@ public sealed class AccountsController : BaseController
     [Route("users/{userId}/email/confirmation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error[]), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> SendConfirmationEmail([FromRoute] int userId, [FromBody] ConfirmationEmaildto info, CancellationToken cancellationToken)
+    public async Task<IActionResult> SendConfirmationEmail([FromRoute] int userId, CancellationToken cancellationToken)
     {
-        Result result = await Mediator.Send(new SendConfirmationEmailCommand(userId, info), cancellationToken);
+        Result result = await Mediator.Send(new SendConfirmationEmailCommand(userId), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);

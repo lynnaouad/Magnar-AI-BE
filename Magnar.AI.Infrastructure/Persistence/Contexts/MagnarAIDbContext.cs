@@ -1,12 +1,15 @@
-﻿using System.Reflection;
-using Duende.IdentityServer.Models;
+﻿using Duende.IdentityServer.Models;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Infrastructure.Interceptors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using System.Reflection;
 
 namespace Magnar.AI.Infrastructure.Persistence.Contexts;
 
-public class MagnarAIDbContext : IdentityDbContext<ApplicationUser>, IMagnarAIDbContext
+public class MagnarAIDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int,
+      IdentityUserClaim<int>, IdentityUserRole<int>, IdentityUserLogin<int>,
+      IdentityRoleClaim<int>, IdentityUserToken<int>>, IMagnarAIDbContext
 {
     private readonly AuditableEntityInterceptor auditableEntityInterceptor;
 

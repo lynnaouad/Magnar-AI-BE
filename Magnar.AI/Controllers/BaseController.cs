@@ -1,4 +1,4 @@
-﻿namespace Magnar.AI.Api.Controllers;
+﻿namespace Magnar.AI.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]

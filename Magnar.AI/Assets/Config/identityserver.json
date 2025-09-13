@@ -1,0 +1,31 @@
+{
+  "IdentityApiConfiguration": {
+    "Clients": [
+      {
+        "Enabled": true,
+        "ClientId": "recruitment.api.d2944c22-84bd-40a7-9d86-76324a1c9fc5",
+        "ClientName": "recruitment.api",
+        "ClientSecrets": [
+          {
+            "Value": "6iUA26gCje9VZA2mXEl+d9PoHYjQH4gtqiRPvx92X7U="
+          }
+        ],
+        "AllowedGrantTypes": [
+          "password",
+          "refresh_token"
+        ],
+        "AllowedScopes": [
+          "read",
+          "write",
+          "modify",
+          "full",
+          "offline_access"
+        ],
+        "AllowedCorsOrigins": [],
+        "AccessTokenLifetime": 3600,
+        "AllowOfflineAccess": true,
+        "RefreshTokenUsage": 1
+      }
+    ]
+  }
+}

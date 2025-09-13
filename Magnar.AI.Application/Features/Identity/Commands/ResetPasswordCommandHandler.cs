@@ -19,7 +19,7 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
     public async Task<Result> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
     {
         ApplicationUser user = await unitOfWork.IdentityRepository.GetUserAsync(request.UserId, cancellationToken);
-        if (string.IsNullOrEmpty(user.Id))
+        if (user.Id == 0)
         {
             throw new InvalidOperationException(Constants.Errors.UserNotFound);
         }

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Magnar.AI.Application.Features.Identity.Notifications;
 
-public sealed record ConfirmUserEmailNotification(string Email, string UserId, string Token) : INotification;
+public sealed record ConfirmUserEmailNotification(string Email, int UserId, string Token) : INotification;
 
 public class ConfirmUserEmailNotificationHandler : INotificationHandler<ConfirmUserEmailNotification>
 {
@@ -31,7 +31,7 @@ public class ConfirmUserEmailNotificationHandler : INotificationHandler<ConfirmU
         await emailService.SendEmailAsync(message, cancellationToken);
     }
 
-    private EmailMessage CreateEmailConfirmationMessage(string emailTo, string userId, string token)
+    private EmailMessage CreateEmailConfirmationMessage(string emailTo, int userId, string token)
     {
         Dictionary<string, string> tokens = new()
         {
@@ -40,7 +40,7 @@ public class ConfirmUserEmailNotificationHandler : INotificationHandler<ConfirmU
                 urlsConfiguration.WebUrl.ToString().Trim('/') ?? string.Empty
             },
             { Constants.PlaceHolders.Token, WebUtility.UrlEncode(token) },
-            { Constants.PlaceHolders.UserId, userId },
+            { Constants.PlaceHolders.UserId, userId.ToString() },
         };
 
         return new EmailMessage(

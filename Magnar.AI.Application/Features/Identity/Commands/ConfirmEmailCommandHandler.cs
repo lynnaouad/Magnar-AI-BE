@@ -1,5 +1,4 @@
-﻿using Magnar.AI.Application.Extensions;
-using Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Magnar.AI.Application.Interfaces.Infrastructure;
 
 namespace Magnar.AI.Application.Features.Identity.Commands;
 
@@ -17,7 +16,7 @@ public class ConfirmEmailCommandHandler : IRequestHandler<ConfirmEmailCommand, R
     public async Task<Result> Handle(ConfirmEmailCommand request, CancellationToken cancellationToken)
     {
         ApplicationUser user = await unitOfWork.IdentityRepository.GetUserAsync(request.UserId, cancellationToken);
-        if (string.IsNullOrEmpty(user.Id))
+        if (user.Id == default)
         {
             throw new InvalidOperationException(Constants.Errors.UserNotFound);
         }

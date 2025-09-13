@@ -5,26 +5,26 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-	
-  <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="EntityFramework" Version="6.5.1" />
-    <PackageReference Include="EPPlus" Version="7.6.1" />
-    <PackageReference Include="FuzzySharp" Version="2.0.2" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.12.2" />
-	<PackageReference Include="itext" Version="9.2.0" />
-	<PackageReference Include="itext.pdfhtml" Version="6.2.0" />
-	<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0-preview.6.25358.103" />
-    <PackageReference Include="Duende.IdentityServer" Version="7.3.0-rc.2" />
-	 <PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.3.0-rc.2" />
-	 <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="9.7.0" />
-	 <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="10.0.0-preview.6.25358.103" />
-	 <PackageReference Include="Microsoft.SemanticKernel" Version="1.61.0" />
-	 <PackageReference Include="Microsoft.SemanticKernel.Connectors.SqlServer" Version="1.61.0-preview" />
-	 <PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1" />
-	 <PackageReference Include="PdfPig" Version="0.1.12-alpha-20250805-e6dd2" />
-	 <PackageReference Include="DevExpress.AspNetCore.Dashboard" Version="24.1.4" />
-  </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.1.66" />
+		<PackageReference Include="EntityFramework" Version="6.5.1" />
+		<PackageReference Include="EPPlus" Version="7.6.1" />
+		<PackageReference Include="FuzzySharp" Version="2.0.2" />
+		<PackageReference Include="HtmlAgilityPack" Version="1.12.2" />
+		<PackageReference Include="itext" Version="9.2.0" />
+		<PackageReference Include="itext.pdfhtml" Version="6.2.0" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0-preview.6.25358.103" />
+		<PackageReference Include="Duende.IdentityServer" Version="7.3.0-rc.2" />
+		<PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.3.0-rc.2" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="9.7.0" />
+		<PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="10.0.0-preview.6.25358.103" />
+		<PackageReference Include="Microsoft.SemanticKernel" Version="1.61.0" />
+		<PackageReference Include="Microsoft.SemanticKernel.Connectors.SqlServer" Version="1.61.0-preview" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1" />
+		<PackageReference Include="PdfPig" Version="0.1.12-alpha-20250805-e6dd2" />
+		<PackageReference Include="DevExpress.AspNetCore.Dashboard" Version="24.1.4" />
+	</ItemGroup>
 
 </Project>

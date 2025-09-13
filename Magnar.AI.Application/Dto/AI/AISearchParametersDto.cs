@@ -6,8 +6,6 @@ namespace Magnar.AI.Application.Dto.AI;
 
 public sealed record AISearchParametersDto
 {
-    public int CompanyId { get; init; }
-
     public int Top { get; init; }
 
     public string Prompt { get; init; } = string.Empty;

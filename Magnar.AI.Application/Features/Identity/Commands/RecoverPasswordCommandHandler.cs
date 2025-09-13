@@ -21,7 +21,7 @@ public class RecoverPasswordCommandHandler : IRequestHandler<RecoverPasswordComm
     public async Task<Result> Handle(RecoverPasswordCommand request, CancellationToken cancellationToken)
     {
         ApplicationUser user = await unitOfWork.IdentityRepository.FindByNameOrEmailAsync(request.Email, cancellationToken);
-        if (string.IsNullOrEmpty(user.Id))
+        if (user.Id == 0)
         {
             return Result.CreateFailure([new(Constants.Errors.UserNotFound)]);
         }

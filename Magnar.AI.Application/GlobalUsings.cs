@@ -10,7 +10,7 @@ global using Magnar.AI.Application.Interfaces.Services;
 global using Magnar.AI.Application.Models;
 global using MediatR;
 global using FluentValidation.Results;
-global using Magnar.AI.Api.Static;
+global using Magnar.AI.Static;
 global using Magnar.AI.Domain.Entities;
 global using Magnar.AI.Entities.Abstraction;
 global using Magnar.AI.Application.Extensions;

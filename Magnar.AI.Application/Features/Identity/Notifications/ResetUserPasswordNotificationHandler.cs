@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace Magnar.AI.Application.Features.Identity.Notifications;
 
-public sealed record ResetUserPasswordNotification(string Email, string UserId, string Token) : INotification;
+public sealed record ResetUserPasswordNotification(string Email, int UserId, string Token) : INotification;
 
 public class ResetUserPasswordNotificationHandler : INotificationHandler<ResetUserPasswordNotification>
 {
@@ -35,7 +35,7 @@ public class ResetUserPasswordNotificationHandler : INotificationHandler<ResetUs
         await emailService.SendEmailAsync(message, cancellationToken);
     }
 
-    private EmailMessage CreateResetPasswordMessage(string emailTo, string userId, string token)
+    private EmailMessage CreateResetPasswordMessage(string emailTo, int userId, string token)
     {
         Dictionary<string, string> tokens = new()
         {
@@ -44,7 +44,7 @@ public class ResetUserPasswordNotificationHandler : INotificationHandler<ResetUs
                 urlsConfiguration.WebUrl.ToString().Trim('/') ?? string.Empty
             },
             { Constants.PlaceHolders.Token, WebUtility.UrlEncode(token) },
-            { Constants.PlaceHolders.UserId, userId },
+            { Constants.PlaceHolders.UserId, userId.ToString() },
         };
 
         return new EmailMessage(

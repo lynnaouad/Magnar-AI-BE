@@ -15,5 +15,5 @@ public sealed class AuthenticateResponse
 
     public string UsernameOrEmail { get; set; } = string.Empty;
 
-    public string UserId { get; set; } = string.Empty;
+    public int UserId { get; set; }
 }

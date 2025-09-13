@@ -63,7 +63,7 @@ public static class DependencyInjection
     private static IServiceCollection AddIdentity(this IServiceCollection services)
     {
         services
-            .AddIdentity<ApplicationUser, IdentityRole>(options =>
+            .AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
             {
                 options.Password.RequiredLength = 8;
                 options.Password.RequiredUniqueChars = 1;

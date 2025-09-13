@@ -1,0 +1,42 @@
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Warning",
+      "Override": {
+        "Microsoft": "Warning",
+        "System": "Warning"
+      }
+    },
+    "Enrich": [
+      "FromLogContext",
+      "WithMachineName",
+      "WithEnvironmentUserName",
+      "WithThreadId",
+      "WithThreadName"
+    ],
+    "Filter": [
+      {
+        "Name": "ByExcluding",
+        "Args": {
+          "expression": "EndsWith(RequestPath, '/healthcheck') and StatusCode=200"
+        }
+      }
+    ],
+    "Properties": {
+      "Application": "Magnar Recruitment Api"
+    },
+    "WriteTo": [
+      {
+        "Name": "File",
+        "Args": {
+          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss zzz} [{Level:u3}] ({Application}/{MachineName}/{CorrelationId}/{EnvironmentUserName}) <{ThreadId}/{ThreadName}>{NewLine}{Message:j}{NewLine}{Exception}",
+          "path": "Logs\\Log-.log",
+          "fileSizeLimitBytes": 1048576,
+          "rollOnFileSizeLimit": true,
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 200
+        }
+      }
+    ]
+  }
+}

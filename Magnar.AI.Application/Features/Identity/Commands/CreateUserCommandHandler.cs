@@ -5,9 +5,9 @@ using Serilog;
 
 namespace Magnar.AI.Application.Features.Identity.Commands;
 
-public sealed record CreateUserCommand(CreateUserDto Info) : IRequest<Result<string>>;
+public sealed record CreateUserCommand(CreateUserDto Info) : IRequest<Result<int>>;
 
-public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result<string>>
+public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result<int>>
 {
     private readonly IMapper mapper;
     private readonly IReCaptchaService reCaptchaService;
@@ -26,18 +26,18 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
         this.unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<string>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result<int>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
         // Check recaptcha token
         if (request.Info.ApplicationUserDto.ReCaptchaTokenEnabled && !await reCaptchaService.ValidateReCaptchaTokenAsync(request.Info.ApplicationUserDto.ReCaptchaToken))
         {
-            return Result<string>.CreateFailure([new(Constants.Errors.CheckReCaptcha)]);
+            return Result<int>.CreateFailure([new(Constants.Errors.CheckReCaptcha)]);
         }
 
         (bool success, Error? error) = await ValidateUser(request.Info.ApplicationUserDto.Username, request.Info.ApplicationUserDto.Email, cancellationToken);
         if (!success)
         {
-            return Result<string>.CreateFailure(error is not null ? [error] : []);
+            return Result<int>.CreateFailure(error is not null ? [error] : []);
         }
 
         try
@@ -60,7 +60,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 
             await SendConfirmationEmail(newUser, cancellationToken);
 
-            return Result<string>.CreateSuccess(newUser.Id);
+            return Result<int>.CreateSuccess(newUser.Id);
         }
         catch (Exception ex)
         {
@@ -68,25 +68,25 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 
             await unitOfWork.RollbackTransactionAsync(cancellationToken);
 
-            return Result<string>.CreateFailure([new Error(ex.Message)]);
+            return Result<int>.CreateFailure([new Error(ex.Message)]);
         }
     }
 
     private async Task<(bool success, Error? error)> ValidateUser(string username, string email, CancellationToken cancellationToken)
     {
         ApplicationUser existingUser = await unitOfWork.IdentityRepository.FindByNameAsync(username, cancellationToken);
-        if (string.IsNullOrEmpty(existingUser.Id))
+        if (existingUser.Id == default)
         {
             existingUser = await unitOfWork.IdentityRepository.FindByEmailAsync(email, cancellationToken);
         }
 
-        if (!string.IsNullOrEmpty(existingUser.Id))
+        if (existingUser.Id != default)
         {
             return (false, new(Constants.Errors.UserAlreadyExists));
         }
 
         existingUser = await unitOfWork.IdentityRepository.FindByEmailAsync(username, cancellationToken);
-        if (!string.IsNullOrEmpty(existingUser.Id))
+        if (existingUser.Id != default)
         {
             return (false, new(Constants.Errors.UsernameMustBeDifferentThanEmail));
         }

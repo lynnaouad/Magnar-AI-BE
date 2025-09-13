@@ -55,12 +55,12 @@ public sealed class IdentityRepository : IIdentityRepository
 
         if (userId == default)
         {
-            return new ApplicationUser() { Id = string.Empty };
+            return new ApplicationUser() { Id = 0 };
         }
 
         ApplicationUser? user = await userManager.FindByIdAsync(userId.ToString());
 
-        return user is null ? new ApplicationUser() { Id = string.Empty } : user;
+        return user is null ? new ApplicationUser() { Id = 0 } : user;
     }
 
     public async Task<bool> EmailConfirmedAsync(ApplicationUser user, CancellationToken cancellationToken)
@@ -78,11 +78,11 @@ public sealed class IdentityRepository : IIdentityRepository
 
         if (string.IsNullOrEmpty(emailOrUsername))
         {
-            return new ApplicationUser() { Id = string.Empty };
+            return new ApplicationUser() { Id = 0 };
         }
 
         ApplicationUser user = await FindByNameAsync(emailOrUsername, cancellationToken);
-        if (string.IsNullOrEmpty(user.Id))
+        if (user.Id == default)
         {
             user = await FindByEmailAsync(emailOrUsername, cancellationToken);
         }
@@ -96,12 +96,12 @@ public sealed class IdentityRepository : IIdentityRepository
 
         if (string.IsNullOrEmpty(username))
         {
-            return new ApplicationUser() { Id = string.Empty };
+            return new ApplicationUser() { Id = 0 };
         }
 
         ApplicationUser? user = await userManager.FindByNameAsync(username);
 
-        return user is null ? new ApplicationUser() { Id = string.Empty } : user;
+        return user is null ? new ApplicationUser() { Id = 0 } : user;
     }
 
     public async Task<ApplicationUser> FindByEmailAsync(string email, CancellationToken cancellationToken)
@@ -110,12 +110,12 @@ public sealed class IdentityRepository : IIdentityRepository
 
         if (string.IsNullOrEmpty(email))
         {
-            return new ApplicationUser() { Id = string.Empty };
+            return new ApplicationUser() { Id = 0 };
         }
 
         ApplicationUser? user = await userManager.FindByEmailAsync(email);
 
-        return user is null ? new ApplicationUser() { Id = string.Empty } : user;
+        return user is null ? new ApplicationUser() { Id = 0 } : user;
     }
 
     public async Task<IdentityResult> ConfirmEmailAsync(ApplicationUser user, string token, CancellationToken cancellationToken)
@@ -144,8 +144,6 @@ public sealed class IdentityRepository : IIdentityRepository
         {
             throw new InvalidOperationException(Constants.Errors.UserNotFound);
         }
-
-        user.Id = Guid.NewGuid().ToString();
 
         IdentityResult result = await userManager.CreateAsync(user, password);
         return !result.Succeeded ? result : await userManager.SetLockoutEnabledAsync(user, false);
@@ -177,7 +175,7 @@ public sealed class IdentityRepository : IIdentityRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        ApplicationUser? existingUser = await userManager.FindByIdAsync(user.Id);
+        ApplicationUser? existingUser = await userManager.FindByIdAsync(user.Id.ToString());
 
         return existingUser == default || (await userManager.DeleteAsync(user)).Succeeded;
     }

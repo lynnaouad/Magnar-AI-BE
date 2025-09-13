@@ -3,7 +3,7 @@ using Magnar.AI.Application.Features.Identity.Notifications;
 
 namespace Magnar.AI.Application.Features.Identity.Commands;
 
-public sealed record SendConfirmationEmailCommand(int UserId, ConfirmationEmaildto Info) : IRequest<Result>;
+public sealed record SendConfirmationEmailCommand(int UserId) : IRequest<Result>;
 
 public class SendConfirmationEmailCommandHandler : IRequestHandler<SendConfirmationEmailCommand, Result>
 {
@@ -21,7 +21,7 @@ public class SendConfirmationEmailCommandHandler : IRequestHandler<SendConfirmat
     public async Task<Result> Handle(SendConfirmationEmailCommand request, CancellationToken cancellationToken)
     {
         ApplicationUser user = await unitOfWork.IdentityRepository.GetUserAsync(request.UserId, cancellationToken);
-        if (string.IsNullOrEmpty(user.Id))
+        if (user.Id == 0)
         {
             throw new InvalidOperationException(Constants.Errors.UserNotFound);
         }

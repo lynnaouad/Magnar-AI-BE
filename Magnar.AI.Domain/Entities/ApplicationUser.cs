@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Magnar.AI.Domain.Entities;
 
-public sealed class ApplicationUser : IdentityUser, IAuditableEntity
+public sealed class ApplicationUser : IdentityUser<int>, IAuditableEntity
 {
     public override string Email => base.Email ?? string.Empty;
 
