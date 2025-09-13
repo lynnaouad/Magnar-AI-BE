@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Magnar.AI.Application.Dto;
+namespace Magnar.AI.Application.Dto.Identity;
 
 public sealed record ReCaptchaResponseDto
 {

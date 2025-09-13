@@ -101,8 +101,10 @@ public static class Constants
 
     public static class ValidationMessages
     {
+        public const string RequiredField = "ValidationMessages.RequiredField";
         public const string PromptRequired = "ValidationMessages.PromptRequired";
         public const string MaxTop10 = "ValidationMessages.MaxTop10";
+        public const string CannotHaveMultipleDefaultConnections = "ValidationMessages.CannotHaveMultipleDefaultConnections";
 
         public static class Identity
         {
@@ -118,6 +120,11 @@ public static class Constants
             public const string LastNameRequired = "ValidationMessages.Identity.LastNameRequired";
             public const string RoleRequired = "ValidationMessages.Identity.RoleRequired";
         }
+    }
+
+    public static class DataProtector
+    {
+        public const string Purpose = "B1122BCF-FA8E-4E02-8078-B367976D1CAA";
     }
 
     public static class PlaceHolders

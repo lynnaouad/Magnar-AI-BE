@@ -1,4 +1,5 @@
 ﻿using Magnar.AI.Application.Configuration;
+using Magnar.AI.Application.Dto.Identity;
 using Magnar.AI.Infrastructure.Extensions;
 using Microsoft.Extensions.Options;
 

@@ -16,7 +16,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, ConfigurationManager configuration)
     {
-        string? connectionString = configuration.GetConnectionString(Constants.Database.DefaultConnectionString);
+        string connectionString = configuration.GetConnectionString(Constants.Database.DefaultConnectionString);
 
         ArgumentNullException.ThrowIfNull(connectionString, nameof(connectionString));
 
@@ -48,7 +48,7 @@ public static class DependencyInjection
     private static IServiceCollection RegisterInfrastructureServices(this IServiceCollection services)
     {
         services.AddScoped<IIdentityRepository, IdentityRepository>();
-        services.AddScoped(typeof(IRepository<,>), typeof(BaseRepository<,>));
+        services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

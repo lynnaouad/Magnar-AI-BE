@@ -28,13 +28,13 @@ public static class InfrastructureExtensions
     /// An object of type <typeparamref name="TResponse"/> if deserialization is successful.
     /// otherwise, the default value of <typeparamref name="TResponse"/> (e.g., null for reference types).
     /// </returns>
-    public static TResponse? DeserializeJsonString<TResponse>(this string contentString)
+    public static TResponse DeserializeJsonString<TResponse>(this string contentString)
         where TResponse : class
     {
-        TResponse? response = default;
+        TResponse response = default;
         try
         {
-            response = JsonSerializer.Deserialize<TResponse?>(contentString);
+            response = JsonSerializer.Deserialize<TResponse>(contentString);
         }
         catch (Exception ex)
         {

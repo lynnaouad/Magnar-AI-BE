@@ -5,9 +5,8 @@ using Microsoft.AspNetCore.OData.Query;
 
 namespace Magnar.AI.Application.Interfaces.Repositories;
 
-public interface IRepository<TEntity, TKey>
-    where TEntity : EntityBase<TKey>
-    where TKey : struct
+public interface IRepository<TEntity>
+    where TEntity : EntityBase
 {
     /// <summary>
     /// Retrieves an entity by its unique identifier (primary key).
@@ -17,7 +16,6 @@ public interface IRepository<TEntity, TKey>
     /// If no entity is found with the specified <paramref name="id"/>, the method returns <c>null</c>.
     /// </remarks>
     /// <typeparam name="TEntity">The type of the entity being retrieved.</typeparam>
-    /// <typeparam name="TKey">The type of the identifier(primary key) for the entity.</typeparam>
     /// <param name="id">The unique identifier of the entity to retrieve.</param>
     /// <param name="tracking"> This ensures that the query results are tracked by the context.</param>
     /// <param name="cancellationToken">
@@ -34,7 +32,7 @@ public interface IRepository<TEntity, TKey>
     /// <exception cref="InvalidOperationException">
     /// Thrown if multiple entities with the same identifier are found, which violates uniqueness.
     /// </exception>
-    Task<TEntity?> GetAsync(TKey id, bool tracking = true, CancellationToken cancellationToken = default);
+    Task<TEntity> GetAsync(int id, bool tracking = true, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves all entities asynchronously.
@@ -77,7 +75,7 @@ public interface IRepository<TEntity, TKey>
     /// A task that represents the asynchronous operation. The task result contains the first element
     /// that satisfies the condition, or <c>null</c> if no such element is found.
     /// </returns>
-    Task<TEntity?> FirstOrDeafultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default);
+    Task<TEntity> FirstOrDeafultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new entity asynchronously.
@@ -121,17 +119,15 @@ public interface IRepository<TEntity, TKey>
     /// Deletes an entity by its unique identifier.
     /// </summary>
     /// <typeparam name="TEntity">The type of the entity being deleted.</typeparam>
-    /// <typeparam name="TKey">The type of the identifier for the entity.</typeparam>
     /// <param name="entityId">The unique identifier of the entity to delete.</param>
-    void Delete(TKey entityId);
+    void Delete(int entityId);
 
     /// <summary>
     /// Deletes multiple entities by their unique identifiers.
     /// </summary>
     /// <typeparam name="TEntity">The type of the entities being deleted.</typeparam>
-    /// <typeparam name="TKey">The type of the identifier for the entities.</typeparam>
     /// <param name="keys">The collection of unique identifiers of the entities to delete.</param>
-    void Delete(IEnumerable<TKey> keys);
+    void Delete(IEnumerable<int> keys);
 
     /// <summary>
     /// Deletes a specific entity.
@@ -158,6 +154,6 @@ public interface IRepository<TEntity, TKey>
     /// This method can be used to access data and filter the result based on provided filter query.
     /// </summary>
     /// <returns> It returns typeof.<OdataResponse> that contains the filtered list and the total count.<T>.</returns>
-    public Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T>? filterOptions = null, Expression<Func<T, bool>>? requiredFilters = null, CancellationToken cancellationToken = default)
+    public Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T> filterOptions = null, Expression<Func<T, bool>> requiredFilters = null, CancellationToken cancellationToken = default)
         where T : class;
 }

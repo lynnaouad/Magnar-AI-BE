@@ -51,6 +51,6 @@ public interface IIdentityRepository
     IQueryable<T> GetAsQueryable<T>()
          where T : class;
 
-    Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T>? filterOptions = null, CancellationToken cancellationToken = default)
+    Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T> filterOptions = null, CancellationToken cancellationToken = default)
          where T : class;
 }

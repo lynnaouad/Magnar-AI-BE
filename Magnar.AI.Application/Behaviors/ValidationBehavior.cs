@@ -33,7 +33,7 @@ public class ValidationBehavior<TRequest, TResponse>
             throw new ValidationFailedException(errors.DistinctBy(x => x.ErrorMessage));
         }
 
-        TResponse? response = await next(cancellationToken);
+        TResponse response = await next(cancellationToken);
 
         return response;
     }

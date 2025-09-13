@@ -1,4 +1,5 @@
-﻿using Magnar.AI.Application.Models.Responses.AI;
+﻿using Magnar.AI.Application.Dto.AI;
+using Magnar.AI.Application.Models.Responses.AI;
 using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace Magnar.AI.Application.Interfaces.Managers;
@@ -22,7 +23,7 @@ public interface IAIManager
     /// <param name="text">The input text to generate an embedding for.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ChunkDto"/> containing the generated embedding, or null if generation fails.</returns>
-    Task<ChunkDto?> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default);
+    Task<ChunkDto> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Performs a semantic search using the original query and vector search results.

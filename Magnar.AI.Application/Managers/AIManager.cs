@@ -5,6 +5,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Serilog;
+using Magnar.AI.Application.Dto.AI;
 
 namespace Magnar.AI.Application.Managers;
 
@@ -65,7 +66,7 @@ public class AIManager : IAIManager
         return [];
     }
 
-    public async Task<ChunkDto?> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
+    public async Task<ChunkDto> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
         return (await GenerateEmbeddingsAsync(text, false, cancellationToken: cancellationToken)).FirstOrDefault();
     }
@@ -106,7 +107,7 @@ public class AIManager : IAIManager
 
     #region Private Methods
 
-    private string? ValidateOpenAIConfiguration()
+    private string ValidateOpenAIConfiguration()
     {
         if (!openAiConfiguration.Enabled)
         {

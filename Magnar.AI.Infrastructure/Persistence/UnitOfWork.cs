@@ -7,18 +7,20 @@ namespace Magnar.AI.Infrastructure.Persistence;
 
 public class UnitOfWork : IUnitOfWork
 {
+    private readonly MagnarAIDbContext dbContext;
+    private readonly IServiceProvider serviceProvider;
+    private bool disposed = false;
+    private IDbContextTransaction transaction = null;
+
     public UnitOfWork(MagnarAIDbContext context, IServiceProvider serviceProvider)
     {
         dbContext = context;
         this.serviceProvider = serviceProvider;
     }
 
-    private readonly MagnarAIDbContext dbContext;
-    private readonly IServiceProvider serviceProvider;
-    private bool disposed = false;
-    private IDbContextTransaction? transaction = null;
-
     public IIdentityRepository IdentityRepository => serviceProvider.GetRequiredService<IIdentityRepository>();
+
+    public IRepository<Connection> ConnectionRepository => serviceProvider.GetRequiredService<IRepository<Connection>>();
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

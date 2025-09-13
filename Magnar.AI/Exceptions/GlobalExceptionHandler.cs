@@ -1,10 +1,12 @@
-﻿// <copyright file="GlobalExceptionHandler.cs" company="Magnar Systems">
-// Copyright (c) Magnar Systems. All rights reserved.
-// </copyright>
-
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Magnar.AI.Application.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Serilog;
 using Serilog.Context;
 

@@ -14,3 +14,4 @@ global using Magnar.AI.Static;
 global using Magnar.AI.Domain.Entities;
 global using Magnar.AI.Entities.Abstraction;
 global using Magnar.AI.Application.Extensions;
+global using Magnar.AI.Domain.Static;

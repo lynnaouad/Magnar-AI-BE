@@ -9,7 +9,7 @@ public sealed record OpenAIConfiguration
     [Required]
     public bool Enabled { get; init; } = false;
 
-    public string? ApiKey { get; init; }
+    public string ApiKey { get; init; }
 
     [Required]
     public string Model { get; init; } = string.Empty;

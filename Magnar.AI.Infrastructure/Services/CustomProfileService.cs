@@ -19,7 +19,7 @@ public class CustomProfileService : IProfileService
     {
         // Get the subject (user ID) from the context
         string subjectId = context.Subject.GetSubjectId();
-        ApplicationUser? user = await _userManager.FindByIdAsync(subjectId);
+        ApplicationUser user = await _userManager.FindByIdAsync(subjectId);
 
         if (user == null)
         {
@@ -41,7 +41,7 @@ public class CustomProfileService : IProfileService
     {
         // Get the subject (user ID) from the context
         string subjectId = context.Subject.GetSubjectId();
-        ApplicationUser? user = await _userManager.FindByIdAsync(subjectId);
+        ApplicationUser user = await _userManager.FindByIdAsync(subjectId);
 
         // Set the user as active if they exist
         context.IsActive = user != null;

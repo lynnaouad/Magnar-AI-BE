@@ -3,9 +3,9 @@
 public class Result<TValue> : Result
     where TValue : notnull
 {
-    private readonly TValue? _value;
+    private readonly TValue _value;
 
-    protected internal Result(TValue? value, bool isSuccess, IEnumerable<Error> error)
+    protected internal Result(TValue value, bool isSuccess, IEnumerable<Error> error)
         : base(isSuccess, error)
     {
         _value = value;

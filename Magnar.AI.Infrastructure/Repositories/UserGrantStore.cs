@@ -19,7 +19,7 @@ public sealed class UserGrantStore : IPersistedGrantStore
         await _context.SaveChangesAsync();
     }
 
-    public async Task<PersistedGrant?> GetAsync(string key)
+    public async Task<PersistedGrant> GetAsync(string key)
     {
         return await _context
             .UserGrants

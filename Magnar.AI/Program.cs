@@ -9,6 +9,11 @@ using Magnar.Recruitment.Infrastructure;
 using Microsoft.SemanticKernel;
 using Serilog;
 using Magnar.AI.Extensions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 
 public partial class Program
 {
@@ -30,6 +35,8 @@ public partial class Program
                 return sp.GetRequiredService<IConfiguration>().GetConnectionString("default")!;
             },
             lifetime: ServiceLifetime.Singleton);
+
+        builder.Services.AddDataProtection();
 
         builder.Services.AddInfrastructureServices(builder.Configuration);
 

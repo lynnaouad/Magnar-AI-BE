@@ -1,8 +1,12 @@
-﻿using Magnar.AI.Application.Features.Identity.Commands;
+﻿using Magnar.AI.Application.Dto.Identity;
+using Magnar.AI.Application.Features.Identity.Commands;
 using Magnar.AI.Application.Features.Identity.Queries;
 using Magnar.AI.Application.Models.Responses;
 using Magnar.Recruitment.Application.Features.Identity.Queries;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Magnar.AI.Controllers;
 

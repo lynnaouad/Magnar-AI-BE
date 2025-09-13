@@ -1,4 +1,4 @@
-﻿namespace Magnar.AI.Application.Dto;
+﻿namespace Magnar.AI.Application.Dto.Identity;
 
 public sealed record ApplicationUserDto
 {
@@ -6,13 +6,13 @@ public sealed record ApplicationUserDto
 
     public string Username { get; init; } = string.Empty;
 
-    public string? NormalizedUsername { get; init; }
+    public string NormalizedUsername { get; init; }
 
     public string Email { get; init; } = string.Empty;
 
-    public string? NormalizedEmail { get; init; }
+    public string NormalizedEmail { get; init; }
 
-    public string? PhoneNumber { get; init; }
+    public string PhoneNumber { get; init; }
 
     public string Password { get; init; } = string.Empty;
 
@@ -24,13 +24,13 @@ public sealed record ApplicationUserDto
 
     public bool EmailConfirmed { get; init; }
 
-    public string? SecurityStamp { get; init; }
+    public string SecurityStamp { get; init; }
 
-    public string? ConcurrencyStamp { get; init; }
+    public string ConcurrencyStamp { get; init; }
 
     public bool PhoneNumberConfirmed { get; init; }
 
-    public DateTimeOffset? LockoutEnd { get; init; }
+    public DateTimeOffset LockoutEnd { get; init; }
 
     public bool LockoutEnabled { get; init; }
 
@@ -38,13 +38,13 @@ public sealed record ApplicationUserDto
 
     public string FirstName { get; init; } = string.Empty;
 
-    public string? MiddleName { get; init; }
+    public string MiddleName { get; init; }
 
     public string LastName { get; init; } = string.Empty;
 
     public bool Active { get; init; }
 
-    public string? OldConfirmedEmail { get; init; } = string.Empty;
+    public string OldConfirmedEmail { get; init; } = string.Empty;
 
     public DateTimeOffset CreatedAt { get; init; }
 

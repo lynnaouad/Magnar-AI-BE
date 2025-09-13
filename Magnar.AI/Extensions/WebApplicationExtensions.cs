@@ -1,5 +1,7 @@
 ﻿using Magnar.AI.Application.Configuration;
 using Magnar.AI.Extensions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Magnar.AI.Extensions;

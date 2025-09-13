@@ -2,6 +2,7 @@
 using Magnar.AI.Application.Features.Identity.Notifications;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
+using Magnar.AI.Application.Dto.Identity;
 
 namespace Magnar.AI.Application.Features.Identity.Commands;
 
@@ -34,7 +35,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
             return Result<int>.CreateFailure([new(Constants.Errors.CheckReCaptcha)]);
         }
 
-        (bool success, Error? error) = await ValidateUser(request.Info.ApplicationUserDto.Username, request.Info.ApplicationUserDto.Email, cancellationToken);
+        (bool success, Error error) = await ValidateUser(request.Info.ApplicationUserDto.Username, request.Info.ApplicationUserDto.Email, cancellationToken);
         if (!success)
         {
             return Result<int>.CreateFailure(error is not null ? [error] : []);
@@ -72,7 +73,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
         }
     }
 
-    private async Task<(bool success, Error? error)> ValidateUser(string username, string email, CancellationToken cancellationToken)
+    private async Task<(bool success, Error error)> ValidateUser(string username, string email, CancellationToken cancellationToken)
     {
         ApplicationUser existingUser = await unitOfWork.IdentityRepository.FindByNameAsync(username, cancellationToken);
         if (existingUser.Id == default)

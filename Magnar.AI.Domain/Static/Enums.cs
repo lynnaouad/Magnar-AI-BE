@@ -21,3 +21,9 @@ public enum DashboardTypes
     Pivot,
     TreeMap,
 }
+
+public enum ProviderTypes
+{
+    SqlServer = 1,
+    API,
+}

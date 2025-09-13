@@ -1,4 +1,5 @@
-﻿using Magnar.AI.Application.Extensions;
+﻿using Magnar.AI.Application.Dto.Identity;
+using Magnar.AI.Application.Extensions;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Serilog;

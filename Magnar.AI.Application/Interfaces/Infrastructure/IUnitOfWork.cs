@@ -1,8 +1,12 @@
-﻿namespace Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace Magnar.AI.Application.Interfaces.Infrastructure;
 
 public interface IUnitOfWork : IAsyncDisposable, IDisposable
 {
     IIdentityRepository IdentityRepository { get; }
+
+    IRepository<Connection> ConnectionRepository { get; }
 
     /// <summary>
     /// Persist set of changes into the data store.

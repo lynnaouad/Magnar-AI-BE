@@ -25,7 +25,7 @@ public static class Utilities
         return provider.Mappings;
     }
 
-    public static string GetExtension(string? path)
+    public static string GetExtension(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -69,14 +69,14 @@ public static class Utilities
         return FilterMimeTypes(desiredExtensions);
     }
 
-    public static bool CheckCompany(string? companyIds, int companyId)
+    public static bool CheckCompany(string companyIds, int companyId)
     {
         if (string.IsNullOrEmpty(companyIds))
         {
             return false;
         }
 
-        IEnumerable<string>? ids = companyIds.Split(',').Select(x => x.Trim());
+        IEnumerable<string> ids = companyIds.Split(',').Select(x => x.Trim());
         if (ids is null || !ids.Any())
         {
             return false;
@@ -88,7 +88,7 @@ public static class Utilities
     /// <summary>
     /// A helper method that safely converts a string to an enum value.
     /// </summary>
-    public static TEnum? GetEnum<TEnum>(string? key)
+    public static TEnum? GetEnum<TEnum>(string key)
         where TEnum : struct, Enum
     {
         return Enum.GetValues<TEnum>().FirstOrDefault(x => x.ToString() == key);
@@ -106,7 +106,7 @@ public static class Utilities
     /// <summary>
     /// Validates whether a string represents a defined value of a specified enum type.
     /// </summary>
-    public static bool ValidateEnumValue<TEnum>(string? value, bool ignoreCase = true)
+    public static bool ValidateEnumValue<TEnum>(string value, bool ignoreCase = true)
         where TEnum : struct, Enum
     {
         if (string.IsNullOrEmpty(value))
@@ -126,7 +126,7 @@ public static class Utilities
     /// <param name="returnSelector">A function that selects the code to return when a match is found (e.g., x => x.Code).</param>
     /// <param name="fuzzyThreshold">(default: 80): The minimum similarity score (0-100) required for a fuzzy match to be considered valid.</param>
     /// <returns>The code (string?) associated with the matched object, or null if no match is found.</returns>
-    public static string? GetCodeFromLookup<T>(string? input, IEnumerable<T> list, Func<T, string?> searchSelector, Func<T, string?> returnSelector, int fuzzyThreshold = 80)
+    public static string GetCodeFromLookup<T>(string input, IEnumerable<T> list, Func<T, string> searchSelector, Func<T, string> returnSelector, int fuzzyThreshold = 80)
     {
         if (string.IsNullOrWhiteSpace(input) || list is null || !list.Any())
         {
@@ -134,7 +134,7 @@ public static class Utilities
         }
 
         // Try exact match (case-insensitive)
-        T? exactMatch = list.FirstOrDefault(x => string.Equals(searchSelector(x), input, StringComparison.OrdinalIgnoreCase));
+        T exactMatch = list.FirstOrDefault(x => string.Equals(searchSelector(x), input, StringComparison.OrdinalIgnoreCase));
         if (exactMatch is not null)
         {
             return returnSelector(exactMatch);
@@ -143,7 +143,7 @@ public static class Utilities
         // Prepare map for fast lookup
         var nameMap = list.Select(x => new { Item = x, Name = searchSelector(x) }).Where(x => !string.IsNullOrWhiteSpace(x.Name));
 
-        ExtractedResult<string>? bestMatch = Process.ExtractOne(input, nameMap.Select(x => x.Name));
+        ExtractedResult<string> bestMatch = Process.ExtractOne(input, nameMap.Select(x => x.Name));
 
         if (bestMatch is not null && bestMatch.Score >= fuzzyThreshold)
         {

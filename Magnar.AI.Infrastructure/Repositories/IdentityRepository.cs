@@ -34,7 +34,7 @@ public sealed class IdentityRepository : IIdentityRepository
     {
         HttpResponseMessage res = await httpClient.SendAsync(CreateAuthenticateRequest(userCredentials.UserName, userCredentials.Password), cancellationToken);
 
-        AuthenticateResponse? authenticationResult = (await res.Content.ReadAsStringAsync(cancellationToken))
+        AuthenticateResponse authenticationResult = (await res.Content.ReadAsStringAsync(cancellationToken))
             .DeserializeJsonString<AuthenticateResponse>();
 
         return authenticationResult ?? throw new InvalidOperationException();
@@ -43,7 +43,7 @@ public sealed class IdentityRepository : IIdentityRepository
     public async Task<AuthenticateResponse> RefreshTokenAsync(UserCredentials userCredentials, CancellationToken cancellationToken)
     {
         HttpResponseMessage res = await httpClient.SendAsync(CreateRefreshTokenRequest(userCredentials.Token), cancellationToken);
-        AuthenticateResponse? authenticationResult = (await res.Content.ReadAsStringAsync(cancellationToken))
+        AuthenticateResponse authenticationResult = (await res.Content.ReadAsStringAsync(cancellationToken))
             .DeserializeJsonString<AuthenticateResponse>();
 
         return authenticationResult ?? throw new InvalidOperationException();
@@ -58,7 +58,7 @@ public sealed class IdentityRepository : IIdentityRepository
             return new ApplicationUser() { Id = 0 };
         }
 
-        ApplicationUser? user = await userManager.FindByIdAsync(userId.ToString());
+        ApplicationUser user = await userManager.FindByIdAsync(userId.ToString());
 
         return user is null ? new ApplicationUser() { Id = 0 } : user;
     }
@@ -99,7 +99,7 @@ public sealed class IdentityRepository : IIdentityRepository
             return new ApplicationUser() { Id = 0 };
         }
 
-        ApplicationUser? user = await userManager.FindByNameAsync(username);
+        ApplicationUser user = await userManager.FindByNameAsync(username);
 
         return user is null ? new ApplicationUser() { Id = 0 } : user;
     }
@@ -113,7 +113,7 @@ public sealed class IdentityRepository : IIdentityRepository
             return new ApplicationUser() { Id = 0 };
         }
 
-        ApplicationUser? user = await userManager.FindByEmailAsync(email);
+        ApplicationUser user = await userManager.FindByEmailAsync(email);
 
         return user is null ? new ApplicationUser() { Id = 0 } : user;
     }
@@ -167,7 +167,7 @@ public sealed class IdentityRepository : IIdentityRepository
             return false;
         }
 
-        ApplicationUser? user = await userManager.FindByIdAsync(userId.ToString());
+        ApplicationUser user = await userManager.FindByIdAsync(userId.ToString());
         return user is null || user == default || await DeleteUserAsync(user, cancellationToken);
     }
 
@@ -175,7 +175,7 @@ public sealed class IdentityRepository : IIdentityRepository
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        ApplicationUser? existingUser = await userManager.FindByIdAsync(user.Id.ToString());
+        ApplicationUser existingUser = await userManager.FindByIdAsync(user.Id.ToString());
 
         return existingUser == default || (await userManager.DeleteAsync(user)).Succeeded;
     }
@@ -258,7 +258,7 @@ public sealed class IdentityRepository : IIdentityRepository
         return context.Set<T>().AsQueryable();
     }
 
-    public async Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T>? filterOptions = null, CancellationToken cancellationToken = default)
+    public async Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T> filterOptions = null, CancellationToken cancellationToken = default)
         where T : class
     {
         OdataResponse<T> response = new()
@@ -266,7 +266,7 @@ public sealed class IdentityRepository : IIdentityRepository
 
         try
         {
-            IQueryable<T>? viewData = GetAsQueryable<T>();
+            IQueryable<T> viewData = GetAsQueryable<T>();
             if (viewData is null)
             {
                 return response;
@@ -297,7 +297,7 @@ public sealed class IdentityRepository : IIdentityRepository
                 return response;
             }
 
-            List<T>? values = await listQueryable.AsNoTracking().ToListAsync(cancellationToken);
+            List<T> values = await listQueryable.AsNoTracking().ToListAsync(cancellationToken);
             if (values is null || values.Count == 0)
             {
                 return response;

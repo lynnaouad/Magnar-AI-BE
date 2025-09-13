@@ -3,10 +3,10 @@
 namespace Magnar.AI.Application.Models;
 
 public sealed record EmailMessage(
-    string? Body,
+    string Body,
     bool IsBodyHtml,
     string Subject,
     MailAddress To,
-    MailAddress? From = default)
+    MailAddress From = default)
 {
 }

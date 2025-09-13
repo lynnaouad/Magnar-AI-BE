@@ -7,13 +7,12 @@ using System.Linq.Expressions;
 
 namespace Magnar.AI.Infrastructure.Repositories;
 
-public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
-    where TEntity : EntityBase<TKey>, new()
-    where TKey : struct
+public class BaseRepository<TEntity> : IRepository<TEntity>
+    where TEntity : EntityBase, new()
 {
     protected MagnarAIDbContext Context { get; }
 
-    public BaseRepository(Persistence.Contexts.MagnarAIDbContext context)
+    public BaseRepository(MagnarAIDbContext context)
     {
         Context = context;
         _dbSet = Context.Set<TEntity>();
@@ -21,7 +20,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
 
     private readonly DbSet<TEntity> _dbSet;
 
-    public async Task<TEntity?> GetAsync(TKey id, bool tracking = true, CancellationToken cancellationToken = default)
+    public async Task<TEntity> GetAsync(int id, bool tracking = true, CancellationToken cancellationToken = default)
     {
         return tracking ? await _dbSet.FindAsync([id], cancellationToken: cancellationToken)
                         : await _dbSet.AsNoTracking().FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken);
@@ -40,7 +39,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
                         : await values.AsNoTracking().ToListAsync(cancellationToken);
     }
 
-    public async Task<TEntity?> FirstOrDeafultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default)
+    public async Task<TEntity> FirstOrDeafultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default)
     {
         return tracking ? await _dbSet.FirstOrDefaultAsync(filter, cancellationToken)
                         : await _dbSet.AsNoTracking().FirstOrDefaultAsync(filter, cancellationToken);
@@ -48,7 +47,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
 
     public async Task<TEntity> CreateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
-        _ = await _dbSet.AddAsync(entity, cancellationToken);
+        await _dbSet.AddAsync(entity, cancellationToken);
         return entity;
     }
 
@@ -59,7 +58,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
 
     public void Update(TEntity entity)
     {
-        _ = _dbSet.Update(entity);
+        _dbSet.Update(entity);
     }
 
     public void Update(IEnumerable<TEntity> entities)
@@ -67,16 +66,16 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
         _dbSet.UpdateRange(entities);
     }
 
-    public void Delete(TKey entityId)
+    public void Delete(int entityId)
     {
-        TEntity? entity = _dbSet.Find(entityId);
+        TEntity entity = _dbSet.Find(entityId);
         if (entity != default)
         {
             Delete(new TEntity { Id = entityId });
         }
     }
 
-    public void Delete(IEnumerable<TKey> keys)
+    public void Delete(IEnumerable<int> keys)
     {
         IQueryable<TEntity> entities = _dbSet.Where(x => keys.Contains(x.Id));
 
@@ -85,7 +84,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
 
     public void Delete(TEntity entity)
     {
-        TEntity? existingEntity = _dbSet.Find(entity.Id);
+        TEntity existingEntity = _dbSet.Find(entity.Id);
         if (existingEntity != default)
         {
             _ = _dbSet.Remove(existingEntity);
@@ -104,7 +103,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
         return Context.Set<T>().AsQueryable();
     }
 
-    public async Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T>? filterOptions = null, Expression<Func<T, bool>>? requiredFilters = null, CancellationToken cancellationToken = default)
+    public async Task<OdataResponse<T>> OdataGetAsync<T>(ODataQueryOptions<T> filterOptions = null, Expression<Func<T, bool>> requiredFilters = null, CancellationToken cancellationToken = default)
         where T : class
     {
         OdataResponse<T> response = new()
@@ -112,7 +111,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
 
         try
         {
-            IQueryable<T>? viewData = GetAsQueryable<T>();
+            IQueryable<T> viewData = GetAsQueryable<T>();
             if (viewData is null)
             {
                 return response;
@@ -148,7 +147,7 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
                 return response;
             }
 
-            List<T>? values = await listQueryable.AsNoTracking().ToListAsync(cancellationToken);
+            List<T> values = await listQueryable.AsNoTracking().ToListAsync(cancellationToken);
             if (values is null || values.Count == 0)
             {
                 return response;

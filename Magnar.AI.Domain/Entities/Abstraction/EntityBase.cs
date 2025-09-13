@@ -1,7 +1,6 @@
 ﻿namespace Magnar.AI.Domain.Entities.Abstraction;
 
-public abstract class EntityBase<TKey>
-    where TKey : struct
+public abstract class EntityBase
 {
-    public TKey Id { get; set; }
+    public int Id { get; set; }
 }

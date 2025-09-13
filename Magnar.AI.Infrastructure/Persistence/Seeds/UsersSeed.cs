@@ -17,7 +17,7 @@ public static class UsersSeed
             EmailConfirmed = true,
         };
 
-        ApplicationUser? user = await userManager.FindByNameAsync(defaultUser.UserName);
+        ApplicationUser user = await userManager.FindByNameAsync(defaultUser.UserName);
         if (user is not null)
         {
             return;
