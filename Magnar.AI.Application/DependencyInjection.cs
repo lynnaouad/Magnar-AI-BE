@@ -47,6 +47,7 @@ public static class DependencyInjection
     private static IServiceCollection RegisterApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<IAIManager, AIManager>();
+        services.AddScoped<IAnnotationFileManager, AnnotationFileManager>();
 
         return services;
     }

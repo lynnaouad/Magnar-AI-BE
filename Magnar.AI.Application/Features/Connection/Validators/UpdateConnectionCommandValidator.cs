@@ -17,7 +17,7 @@ public class UpdateConnectionCommandValidator : AbstractValidator<UpdateConnecti
         RuleFor(x => x.Connection)
            .MustAsync(async (connection, cancellation) =>
            {
-               var defaultConnectionExist = await unitOfWork.ConnectionRepository.FirstOrDeafultAsync(x => x.IsDefault && x.Id != connection.Id, false, cancellation);
+               var defaultConnectionExist = await unitOfWork.ConnectionRepository.FirstOrDefaultAsync(x => x.IsDefault && x.Id != connection.Id, false, cancellation);
 
                return !connection.IsDefault || defaultConnectionExist is null;
            })

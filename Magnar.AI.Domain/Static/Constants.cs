@@ -34,6 +34,7 @@ public static class Constants
         public const string GenerateDashboardError = "Errors.GenerateDashboardError";
         public const string VectorSearchNotEnabled = "Errors.VectorSearchNotEnabled";
         public const string DatabaseInitialization = "Errors.DatabaseInitialization";
+        public const string NoDefaultConnectionConfigured = "Errors.NoDefaultConnectionConfigured";
     }
 
     public static class Common

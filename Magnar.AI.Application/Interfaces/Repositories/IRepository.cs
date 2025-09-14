@@ -75,7 +75,7 @@ public interface IRepository<TEntity>
     /// A task that represents the asynchronous operation. The task result contains the first element
     /// that satisfies the condition, or <c>null</c> if no such element is found.
     /// </returns>
-    Task<TEntity> FirstOrDeafultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default);
+    Task<TEntity> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new entity asynchronously.

@@ -39,7 +39,7 @@ public class BaseRepository<TEntity> : IRepository<TEntity>
                         : await values.AsNoTracking().ToListAsync(cancellationToken);
     }
 
-    public async Task<TEntity> FirstOrDeafultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default)
+    public async Task<TEntity> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> filter, bool tracking = true, CancellationToken cancellationToken = default)
     {
         return tracking ? await _dbSet.FirstOrDefaultAsync(filter, cancellationToken)
                         : await _dbSet.AsNoTracking().FirstOrDefaultAsync(filter, cancellationToken);

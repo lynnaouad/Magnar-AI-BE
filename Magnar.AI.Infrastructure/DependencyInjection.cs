@@ -1,6 +1,7 @@
 ﻿using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Infrastructure.Interceptors;
+using Magnar.AI.Infrastructure.Managers;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
 using Magnar.AI.Infrastructure.Repositories;
 using Magnar.Recruitment.Infrastructure.Managers;
@@ -51,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ISchemaManager, SchemaManager>();
 
         services.AddScoped(typeof(IVectorStoreManager<>), typeof(VectorStoreManager<>));
 
