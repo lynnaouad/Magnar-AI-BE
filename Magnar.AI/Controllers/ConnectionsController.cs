@@ -40,9 +40,9 @@ public class ConnectionsController : BaseController
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateAsync([FromBody] ConnectionDto configuration, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateAsync([FromBody] ConnectionDto connection, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new CreateConnectionCommand(configuration), cancellationToken);
+        var result = await Mediator.Send(new CreateConnectionCommand(connection), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -52,9 +52,9 @@ public class ConnectionsController : BaseController
     }
 
     [HttpPut]
-    public async Task<IActionResult> UpdateAsync([FromBody] ConnectionDto configuration, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateAsync([FromBody] ConnectionDto connection, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new UpdateConnectionCommand(configuration), cancellationToken);
+        var result = await Mediator.Send(new UpdateConnectionCommand(connection), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -74,5 +74,18 @@ public class ConnectionsController : BaseController
         }
 
         return Ok();
+    }
+
+    [HttpPost]
+    [Route("test")]
+    public async Task<IActionResult> TestConnectionAsync([FromBody] ConnectionDto connection, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new TestConnectionCommand(connection), cancellationToken);
+        if (!result.Success)
+        {
+            return BadRequest(result.Errors);
+        }
+
+        return Ok(result.Value);
     }
 }

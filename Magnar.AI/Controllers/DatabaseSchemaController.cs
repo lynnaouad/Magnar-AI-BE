@@ -1,6 +1,8 @@
 ﻿using Magnar.AI.Application.Dto.Schema;
 using Magnar.AI.Application.Features.DatabaseSchema.Commands;
 using Magnar.AI.Application.Features.DatabaseSchema.Queries;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,7 +42,7 @@ public class DatabaseSchemaController : BaseController
     /// Add or update a table block
     /// </summary>
     [HttpPost("annotate")]
-    public async Task<IActionResult> AnnotateSchema(TableAnnotationRequest annotationRequest, CancellationToken cancellationToken)
+    public async Task<IActionResult> AnnotateSchema([FromBody]IEnumerable<TableAnnotationRequest> annotationRequest, CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new AnnotateDatabaseSchemaCommand(annotationRequest), cancellationToken);
         if (!result.Success)

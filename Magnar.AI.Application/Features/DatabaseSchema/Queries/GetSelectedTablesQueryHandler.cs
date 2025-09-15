@@ -11,13 +11,15 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
         #region Members
         private readonly IAnnotationFileManager annotationFileManager;
         private readonly IUnitOfWork unitOfWork;
+        private readonly ISchemaManager schemaManager;
         #endregion
 
         #region Constructor
-        public GetSelectedTablesQueryHandler(IAnnotationFileManager annotationFileManager, IUnitOfWork unitOfWork)
+        public GetSelectedTablesQueryHandler(IAnnotationFileManager annotationFileManager, IUnitOfWork unitOfWork, ISchemaManager schemaManager)
         {
             this.annotationFileManager = annotationFileManager;
             this.unitOfWork = unitOfWork;
+            this.schemaManager = schemaManager;
         }
         #endregion
 
@@ -29,6 +31,18 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
                 return Result<IEnumerable<SelectedTableBlock>>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
             }
 
+            // Get All database tables
+            var databaseTablesResult = await schemaManager.GetTablesAsync(cancellationToken);
+            if (!databaseTablesResult.Success)
+            {
+                return Result<IEnumerable<SelectedTableBlock>>.CreateFailure([new(Constants.Errors.ErrorOccured)]);
+            }
+
+            // Clean old tables that may be deleted or renamed
+            var existingDbTables = databaseTablesResult.Value.Select(t => $"[{t.SchemaName}].[{t.TableName}]");
+            await annotationFileManager.CleanupOrphanedBlocksAsync(defaultConnection.Id, existingDbTables);
+
+            // Get selected tables
             var result = await annotationFileManager.ReadAllBlocksAsync(defaultConnection.Id);
 
             return Result<IEnumerable<SelectedTableBlock>>.CreateSuccess(result);

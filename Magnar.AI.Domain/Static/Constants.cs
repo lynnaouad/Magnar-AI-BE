@@ -35,6 +35,8 @@ public static class Constants
         public const string VectorSearchNotEnabled = "Errors.VectorSearchNotEnabled";
         public const string DatabaseInitialization = "Errors.DatabaseInitialization";
         public const string NoDefaultConnectionConfigured = "Errors.NoDefaultConnectionConfigured";
+        public const string ConnectionSuccessful = "Errors.ConnectionSuccessful";
+        public const string ConnectionFailed = "Errors.ConnectionFailed";
     }
 
     public static class Common
@@ -45,6 +47,14 @@ public static class Constants
     public static class SigningCredentials
     {
         public const string PrivateKey = @"MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCuz3Z1MIKPW9w/3plpXzrA1BQhEXPNzffbVFdpLwYnfAXf9v0hXvhgHpfp0i5AhRebMDffB7pDa54iZp965nyjsDJyGgvPBHokTF4NpWEDHPw3nudUh3xkOu4/AET1JED25fIPQ9OzwxTV4KGXNP1LDxdiNbRACE3j8G4sWnMozqA/k+2Wfbc68l9/HR+MYXab8PmN+QVKD/Bi9TGkJW6J7VAR6W1nKcdHvL/9NVhhFSs3oODxG7i7R6dwSOBKosGnZdxEESfEWj10P4/FMGBMMfYONX/0z8YFxnORyJFuezCrPk9UwD1IApwi6YifOqbnpCpB16t7FrmkZImbjbaJAgMBAAECggEBAKCi1ijkNeWEtUUfyXux3ayadhDZF8BT9+Jdg6GNa6tW5ZMkRQGoYrb5BgIAeS4i30llKsJROJGB0COuh/iI2poUbJa7ZoSKia7XWkpR4W7Z8M8vv0XG5sC4Anx0Q+m8sdHwBdqPKnfy2S+cpwDq2aNir8s4rHV27BR8uNEbIN2qVRWmgrVaVMFnMx/4dRyJuZlbJzGyJiU20zxiNla4wlD/qNp+qlKD5F818yDPVl4pUNElS0elZ05tWUZ6tk7FCvIyh9t/KyfpuA/+7tve2PuTl8tVANzi1+q8HCwULDm6aZpJbRQBnxv5rql2lqtcS+xbgYTe6zHnLb+sKBGL3m0CgYEA3YFTv3YpSSmz0GOdkVVddQIIsjonRml6Ysswh7Zj0XAK784gufQiEjM7TLjt0chd9EPZZ4KFcIbvcTl/wrRTUEluURrQ7pE1t+9fTt9foeiDwHhJcaFzkiR5mJmCqqzBGOddY+/tlC3VXx7jD0D98/UMYstYC+uC/U74lkxx1I8CgYEAygiSAgLozUEAyH05JecjZw+BH+5XVYSaop3jN0h6V+2Cc5sGzpLHZ6rH7Z7WgMD0q2cfLBRGQnma/Ws8s6qOQ2wzewiBnslix6WRxkydidNaRA9mZjvp46AgNGLR0CsFv5UJxM+mAkqafc6MXgszZ8kGrSK6pF12R1Vbuu9uP2cCgYArblovZkm+ELEzIPUaM/S5Jobx+zkMM05N5K1FTtvPivp5/p6oF1g+3VC5QGFRCspxRIRyKUNkxvBX8QA9+wGC8oLw4CMrQ8mWoRa87ktgAakjqfIsl42DkCdPZnoaYPkTmvnSyI56yWnW1sWKjiG9HcUp8dj3rVvnsv5G6gI/vQKBgQC0dqtVOJwSm7nDXHerr6cj6+l/SDqinOwzzaykOQ1vdSxNb3DJHLsZkqc7TeJ05+alJFvn18RapJ0ZOKzkH7kr6H6jq5l86I5fnzlzVAR0lGHQ4aCqOWJWfTXHFW4s8AEWfF5ZetHiwhj1v4YKix7D2gEorhjhsMpyNYDWngBwiQKBgAmSbs81B/nld1YEwMNC/I7huNKd7TvLA49nequm4fsddhtOoe6qagfRTmeyPJpI2Sm+1fuRA5auQiKwpGtyYsVFiTZ+BaWGZOH6rgrkrsnWKMDDOh0pR2BLNG1jkwYGaJYiIksN5W23LVWH7dSXevfLGgvA/oroorG1ApsU3XIn";
+    }
+
+    public static class Dashboards
+    {
+        public const string DynamicQuery = "DynamicQuery";
+        public const string DynamicSqlDataSource = "DynamicSqlDataSource";
+        public const string Category = "Category";
+        public const string Value = "Value";
     }
 
     public static class ClientApp
@@ -96,6 +106,7 @@ public static class Constants
     {
         public const string Assets = "Assets";
         public const string Prompts = "Prompts";
+        public const string DashboardPrompts = "Dashboard";
         public const string SystemPrompts = "SystemPrompts";
         public const string UserPrompts = "UserPrompts";
     }

@@ -20,7 +20,7 @@ public class UnitOfWork : IUnitOfWork
 
     public IIdentityRepository IdentityRepository => serviceProvider.GetRequiredService<IIdentityRepository>();
 
-    public IRepository<Connection> ConnectionRepository => serviceProvider.GetRequiredService<IRepository<Connection>>();
+    public IConnectionRepository ConnectionRepository => serviceProvider.GetRequiredService<IConnectionRepository>();
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

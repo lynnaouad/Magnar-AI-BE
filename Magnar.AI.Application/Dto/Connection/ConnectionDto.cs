@@ -6,6 +6,8 @@ namespace Magnar.AI.Application.Dto.Connection
     {
         public int Id { get; set; }
 
+        public string Name { get; set; } = string.Empty;
+
         public ProviderTypes Provider { get; set; }
 
         public bool IsDefault { get; set; }

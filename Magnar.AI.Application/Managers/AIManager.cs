@@ -1,11 +1,12 @@
-﻿using Magnar.AI.Application.Interfaces.Managers;
+﻿using Magnar.AI.Application.Configuration;
+using Magnar.AI.Application.Dto.AI;
+using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Models.Responses.AI;
-using Magnar.AI.Application.Configuration;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Serilog;
-using Magnar.AI.Application.Dto.AI;
+using Error = Magnar.AI.Application.Models.Error;
 
 namespace Magnar.AI.Application.Managers;
 

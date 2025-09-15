@@ -6,7 +6,7 @@ public interface IUnitOfWork : IAsyncDisposable, IDisposable
 {
     IIdentityRepository IdentityRepository { get; }
 
-    IRepository<Connection> ConnectionRepository { get; }
+    IConnectionRepository ConnectionRepository { get; }
 
     /// <summary>
     /// Persist set of changes into the data store.

@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-	<NoWarn>$(NoWarn);SKEXP0010</NoWarn>
+	<NoWarn>$(NoWarn);SKEXP0010;OPENAI001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,5 +40,11 @@
     <Content Update="Assets\Config\serilog.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+	<Content Include="Assets\Prompts\Dashboard\generate-dashboard-sql-system.txt">
+		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
+	<Content Include="Assets\Prompts\Dashboard\generate-dashboard-sql-user.txt">
+		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
   </ItemGroup>
 </Project>

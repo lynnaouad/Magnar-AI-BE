@@ -12,7 +12,4 @@ public sealed record VectorConfiguration
 
     [Required]
     public bool EnableVectors { get; init; }
-
-    [Required]
-    public bool SeedDatabaseSchema { get; init; }
 }

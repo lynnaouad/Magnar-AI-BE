@@ -5,6 +5,8 @@ namespace Magnar.AI.Domain.Entities
 {
     public class Connection : EntityBase, IAuditableEntity
     {
+        public string Name { get; set; } = string.Empty;
+
         public ProviderTypes Provider { get; set; }
 
         public bool IsDefault { get; set; }

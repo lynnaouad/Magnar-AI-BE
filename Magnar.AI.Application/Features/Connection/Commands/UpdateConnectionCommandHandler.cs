@@ -1,6 +1,5 @@
 ﻿using Magnar.AI.Application.Dto.Connection;
 using Magnar.AI.Application.Interfaces.Infrastructure;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace Magnar.AI.Application.Features.Connection.Commands
 {
@@ -11,28 +10,26 @@ namespace Magnar.AI.Application.Features.Connection.Commands
         #region Members
         private readonly IUnitOfWork unitOfWork;
         private readonly IMapper mapper;
-        private readonly IDataProtector protector;
         #endregion
 
         #region Constructor
-        public UpdateConnectionCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IDataProtectionProvider dataProtectorProvider)
+        public UpdateConnectionCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
-            protector = dataProtectorProvider.CreateProtector(Constants.DataProtector.Purpose);
         }
         #endregion
 
         public async Task<Result> Handle(UpdateConnectionCommand request, CancellationToken cancellationToken)
         {
-            if (request.Connection.Provider == ProviderTypes.SqlServer)
+            if (request.Connection.Provider == ProviderTypes.SqlServer && request.Connection.Details is not null)
             {
-                request.Connection.Details.SqlServerConfiguration.Password = protector.Protect(request.Connection.Details.SqlServerConfiguration.Password);
+                var protectedPassword = unitOfWork.ConnectionRepository.ProtectPassword(request.Connection.Details.SqlServerConfiguration.Password);
+
+                request.Connection.Details.SqlServerConfiguration.Password = protectedPassword;
             }
 
-            var updatedConnection = mapper.Map<Domain.Entities.Connection>(request.Connection);
-
-            unitOfWork.ConnectionRepository.Update(updatedConnection);
+            unitOfWork.ConnectionRepository.Update(mapper.Map<Domain.Entities.Connection>(request.Connection));
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
 

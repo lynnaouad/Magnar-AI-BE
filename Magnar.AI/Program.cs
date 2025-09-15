@@ -1,19 +1,20 @@
 ﻿using DevExpress.AspNetCore;
 using DevExpress.DashboardAspNetCore;
 using DevExpress.DashboardWeb;
+using DevExpress.DataAccess.ConnectionParameters;
 using Magnar.AI;
 using Magnar.AI.Application;
 using Magnar.AI.Application.Dashboards;
+using Magnar.AI.Extensions;
 using Magnar.AI.Infrastructure.Extensions;
 using Magnar.Recruitment.Infrastructure;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.SemanticKernel;
 using Serilog;
-using Magnar.AI.Extensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
 
 public partial class Program
 {
@@ -58,11 +59,26 @@ public partial class Program
                 AllowExecutingCustomSql = true,
             };
 
+            DashboardConfigurator.PassCredentials = true;
             configurator.SetDashboardStorage(storage);
 
             configurator.SetConnectionStringsProvider(new DashboardConnectionStringsProvider(builder.Configuration));
 
             configurator.SetDashboardStorage(storage);
+
+            //configurator.ConfigureDataConnection += (s, e) =>
+            //{
+            //    if (e.ConnectionName == "Dynamic") // must match the ConnectionName you set in GenerateDashboard
+            //    {
+            //        e.ConnectionParameters = new MsSqlConnectionParameters(
+            //            "LYNN\\SQL2025",
+            //            "RecruitmentDbTest",
+            //            "sa",
+            //            "lynnaouad",
+            //            MsSqlAuthorizationType.SqlServer
+            //        );
+            //    }
+            //};
 
             return configurator;
         });

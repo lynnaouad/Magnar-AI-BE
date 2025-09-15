@@ -1,6 +1,5 @@
 ﻿using Magnar.AI.Application.Dto.Connection;
 using Magnar.AI.Application.Interfaces.Infrastructure;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace Magnar.AI.Application.Features.Connection.Queries
 {
@@ -10,35 +9,24 @@ namespace Magnar.AI.Application.Features.Connection.Queries
     {
         #region Members
         private readonly IUnitOfWork unitOfWork;
-        private readonly IMapper mapper;
-        private readonly IDataProtector protector;
         #endregion
 
         #region Constructor
-        public GetConnectionQueryHandler(IUnitOfWork unitOfWork, IMapper mapper, IDataProtectionProvider dataProtectorProvider)
+        public GetConnectionQueryHandler(IUnitOfWork unitOfWork)
         {
             this.unitOfWork = unitOfWork;
-            this.mapper = mapper;
-            protector = dataProtectorProvider.CreateProtector(Constants.DataProtector.Purpose);
         }
         #endregion
 
         public async Task<Result<ConnectionDto>> Handle(GetConnectionQuery request, CancellationToken cancellationToken)
         {
-            var connection = await unitOfWork.ConnectionRepository.GetAsync(request.Id, false, cancellationToken);
-            if (connection is null || string.IsNullOrEmpty(connection.Details))
+            var connection = await unitOfWork.ConnectionRepository.GetConnectionAsync(request.Id, cancellationToken);
+            if (connection is null)
             {
                 return Result<ConnectionDto>.CreateFailure([new(Constants.Errors.NotFound)]);
             }
 
-            var mappedConnection = mapper.Map<ConnectionDto>(connection);
-
-            if (mappedConnection.Provider == ProviderTypes.SqlServer && mappedConnection.Details is not null)
-            {
-                mappedConnection.Details.SqlServerConfiguration.Password = protector.Unprotect(mappedConnection.Details.SqlServerConfiguration.Password);
-            }
-
-            return Result<ConnectionDto>.CreateSuccess(mappedConnection);
+            return Result<ConnectionDto>.CreateSuccess(connection);
         }
     }
 }

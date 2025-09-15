@@ -23,6 +23,10 @@ public class UpdateConnectionCommandValidator : AbstractValidator<UpdateConnecti
            })
           .WithMessage(Constants.ValidationMessages.CannotHaveMultipleDefaultConnections);
 
+        RuleFor(x => x.Connection.Name)
+            .NotEmpty()
+            .WithMessage(Constants.ValidationMessages.RequiredField);
+
         RuleFor(x => x.Connection.Provider)
             .NotEmpty()
             .WithMessage(Constants.ValidationMessages.RequiredField);
