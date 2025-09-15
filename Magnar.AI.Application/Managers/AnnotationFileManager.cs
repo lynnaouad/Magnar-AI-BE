@@ -112,51 +112,8 @@ namespace Magnar.AI.Application.Managers
 
             foreach (var req in requests)
             {
-                // Build new block for this table
-                var sb = new StringBuilder();
-                sb.AppendLine($"Table: {req.FullTableName}");
-                sb.AppendLine($"Description: {req.TableDescription?.Trim() ?? string.Empty}");
-                sb.AppendLine("Columns:");
-
-                foreach (var (col, comment) in req.ColumnComments.OrderBy(kv => kv.Key))
-                {
-                    var suffix = string.IsNullOrWhiteSpace(comment) ? string.Empty : $" : {comment}";
-                    sb.AppendLine($"- [{col}]{suffix}");
-                }
-
-                var newBlock = sb.ToString().TrimEnd();
-
-                // Try to replace existing block
-                var updated = Regex.Replace(
-                    all,
-                    Regex.Escape($"Table: {req.FullTableName}") + @"[\s\S]*?(?=(?:\r?\n){2}|\z)",
-                    newBlock,
-                    RegexOptions.Multiline);
-
-                if (updated != all)
-                {
-                    // Replacement happened
-                    all = updated;
-                }
-                else
-                {
-                    // Append to the end
-                    if (!string.IsNullOrWhiteSpace(all))
-                    {
-                        all = all.TrimEnd() + Environment.NewLine + Environment.NewLine + newBlock;
-                    }
-                    else
-                    {
-                        all = newBlock;
-                    }
-                }
-
-                // Re-normalize after each addition to keep spacing consistent
-                all = Regex.Replace(all.Trim(), @"(\r?\n){3,}", Environment.NewLine + Environment.NewLine);
+                await AppendOrReplaceBlockAsync(all, path, req, connectionId);
             }
-
-            // Save back once at the end
-            await File.WriteAllTextAsync(path, all + Environment.NewLine);
         }
 
         public async Task CleanupOrphanedBlocksAsync(int connectionId, IEnumerable<string> existingDbTables)
@@ -199,6 +156,57 @@ namespace Magnar.AI.Application.Managers
 
         #region Private Methods
         private string GetFilePath(int connectionId) => Path.Combine(baseFolder, $"annotations_{connectionId}.txt");
+
+        private async Task AppendOrReplaceBlockAsync(string all,string path, TableAnnotationRequest req, int connectionId)
+        {
+            // Build block text in the exact format
+            var sb = new StringBuilder();
+            sb.AppendLine($"Table: {req.FullTableName}");
+            sb.AppendLine($"Description: {req.TableDescription?.Trim() ?? string.Empty}");
+            sb.AppendLine("Columns:");
+
+            // Add each column, sorted by column name (to keep order consistent)
+            foreach (var (col, comment) in req.ColumnComments.OrderBy(kv => kv.Key))
+            {
+                var suffix = string.IsNullOrWhiteSpace(comment) ? string.Empty : $" : {comment}";
+                sb.AppendLine($"- [{col}]{suffix}");
+            }
+
+            // Final block with guaranteed trailing newline
+            var newBlock = sb.ToString().TrimEnd();
+
+            // Try to replace existing block
+            bool replaced = false;
+            if (!string.IsNullOrWhiteSpace(all))
+            {
+                all = Regex.Replace(
+                    all,
+                    Regex.Escape($"Table: {req.FullTableName}") + @"[\s\S]*?(?=(?:\r?\n){2}|\z)",
+                    newBlock,
+                    RegexOptions.Multiline);
+
+                replaced = all.Contains(newBlock);
+            }
+
+            // If not replaced → append to the end
+            if (!replaced)
+            {
+                if (!string.IsNullOrWhiteSpace(all))
+                {
+                    all = all.TrimEnd() + Environment.NewLine + Environment.NewLine + newBlock;
+                }
+                else
+                {
+                    all = newBlock;
+                }
+            }
+
+            // Normalize spacing: ensure only 2 empty lines between blocks
+            all = Regex.Replace(all.Trim(), @"(\r?\n){3,}", Environment.NewLine + Environment.NewLine);
+
+            // Save back to the file
+            await File.WriteAllTextAsync(path, all + Environment.NewLine);
+        }
         #endregion
     }
 }

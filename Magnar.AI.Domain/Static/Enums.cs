@@ -25,5 +25,4 @@ public enum DashboardTypes
 public enum ProviderTypes
 {
     SqlServer = 1,
-    API,
 }
