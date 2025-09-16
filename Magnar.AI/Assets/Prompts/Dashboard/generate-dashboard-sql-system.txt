@@ -9,10 +9,10 @@ Do not output SQL separately.
 - The JSON must always follow this schema:
 {{
   "Success": true,
-  "RelevantTables": ["Table1", "Table2"],
-  "MissingTables": [],
+  "RelevantTables": ["Table1", "Table2"], // List of database tables that were identified as relevant to the user’s request.
+  "MissingTables": [], // List of required tables mentioned in the request but not found in the schema context.
   "Sql": "SELECT ... FROM ... ",
-  "Columns": ["Column 1", "Column 2"]
+  "Columns": ["Column 1", "Column 2"] // The final output column names from the SQL query, in the order they appear in the result set. The names must exactly match the aliases or column names in the SELECT list.
 }}
 
 - Database Schema context:
@@ -45,23 +45,7 @@ Rules depending on chart type:
     * Return meaningful columns directly from the schema.
     * Aliases not required unless user explicitly asks.
     * Do not collapse to Category/Value only.
-- Pivot:
-    * Always return at least 3 fields:
-        - One for Row dimension (alias as RowCategory)
-        - One for Column dimension (alias as ColumnCategory)
-        - One numeric aggregation (alias as Value)
-    * If the user request only provides one grouping, invent a sensible second categorical field
-      from the available schema (e.g. Gender, Department, City, Year) so the pivot has both rows and columns.
 - TreeMap:
     * Return two fields:
       - A grouping column (alias as 'Category')
       - An aggregated numeric (alias as 'Value')
-- Scatter:
-    * Return at least two numeric measures (alias as 'X' and 'Y').
-    * Optionally include a 'Category' field for grouping.
-- RangeFilter:
-    * Return a date/time column (alias as 'Date') and one numeric value (alias as 'Value').
-
-In addition to the SQL, you MUST return the list of generated column names in a JSON array called ""Columns"".
-The names must exactly match the aliases or column names in the SELECT list.
-The names must exactly match the aliases or column names in the SELECT list.

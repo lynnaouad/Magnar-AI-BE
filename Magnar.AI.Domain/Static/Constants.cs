@@ -37,6 +37,7 @@ public static class Constants
         public const string NoDefaultConnectionConfigured = "Errors.NoDefaultConnectionConfigured";
         public const string ConnectionSuccessful = "Errors.ConnectionSuccessful";
         public const string ConnectionFailed = "Errors.ConnectionFailed";
+        public const string CannotGenerateDashboardUpdateSchema = "Errors.CannotGenerateDashboardUpdateSchema";
     }
 
     public static class Common

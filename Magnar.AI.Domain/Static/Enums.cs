@@ -18,7 +18,6 @@ public enum DashboardTypes
     Pie = 1,
     Chart,
     Grid,
-    Pivot,
     TreeMap,
 }
 

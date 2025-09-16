@@ -5,7 +5,7 @@ namespace Magnar.AI.Entities.Abstraction;
 public abstract class VectorStoreBase
 {
     [VectorStoreKey]
-    public Guid ID { get; set; }
+    public string Id { get; set; }
 
     [VectorStoreData]
     public string Text { get; set; } = string.Empty;

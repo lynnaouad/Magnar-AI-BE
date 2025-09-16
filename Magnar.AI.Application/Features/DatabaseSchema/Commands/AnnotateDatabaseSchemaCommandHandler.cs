@@ -4,6 +4,8 @@ using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Domain.Entities.Vectors;
 using Microsoft.Extensions.Options;
+using System.Linq;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 
 namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
@@ -58,7 +60,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
            
             var tables = await annotationFileManager.ReadAllBlocksAsync(defaultConnection.Id);
 
-            await StoreTablesInVectorStore(tables, defaultConnection.Id, cancellationToken);
+            await StoreTablesInVectorStore(tables, requests, defaultConnection.Id, cancellationToken);
 
             return Result.CreateSuccess();
         }
@@ -108,11 +110,14 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             return enrichedRequests;
         }
 
-        // Save entire file in vector store on every update to handle table removals or renaming
-        private async Task StoreTablesInVectorStore(IEnumerable<SelectedTableBlock> tables, int connectionId, CancellationToken cancellationToken)
+        private async Task StoreTablesInVectorStore(IEnumerable<SelectedTableBlock> allTables, IEnumerable<TableAnnotationRequest> requestedTables, int connectionId, CancellationToken cancellationToken)
         {
             List<DatabaseSchemaEmbedding> embeddings = [];
 
+            // Set of tables we want to persist
+            var tables = allTables.Where(t => requestedTables.Select(x => x.FullTableName).Contains(t.FullTableName));
+
+            // Generate embeddings for the current tables
             var tasks = tables.Select(async table =>
             {
                 var response = await aiManager.GenerateEmbeddingAsync(table.RawBlockText, cancellationToken);
@@ -121,29 +126,41 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
                     return null;
                 }
 
-                return new
+                return new DatabaseSchemaEmbedding
                 {
-                    Table = table,
-                    Response = response
+                    Id = $"{table.FullTableName}_{connectionId}",
+                    Name = table.FullTableName,
+                    ConnectionId = connectionId,
+                    ChunckIndex = response.Index,
+                    Text = response.Text,
+                    Embedding = response.Embedding,
                 };
             });
 
             var results = await Task.WhenAll(tasks);
+            embeddings.AddRange(results.Where(e => e is not null)!);
 
-            foreach (var result in results.Where(r => r is not null))
+            var filters = new Dictionary<string, object>
             {
-                embeddings.Add(new()
+                { nameof(DatabaseSchemaEmbedding.ConnectionId), connectionId.ToString() ?? string.Empty },
+            };
+
+            // Get all existing embeddings for this connection
+            var existingIdsInStore = await vectorStore.ListIdsAsync(filters, cancellationToken);
+
+            // Determine obsolete embeddings (tables deleted from file)
+            var currentIds = allTables.Select(e => e.FullTableName + "_" + connectionId).ToHashSet();
+            var toDelete = existingIdsInStore.Except(currentIds);
+
+            foreach (var id in toDelete)
+            {
+                await vectorStore.DeleteAsync(new Dictionary<string, object>
                 {
-                    ID = Guid.NewGuid(),
-                    Name = result.Table.FullTableName,
-                    ConnectionId = connectionId,
-                    ChunckIndex = result.Response.Index,
-                    Text = result.Response.Text,
-                    Embedding = result.Response.Embedding,
-                });
+                    { "Id", id }
+                }, cancellationToken);
             }
 
-            await vectorStore.DeleteTableAsync(cancellationToken);
+            // Upsert the current embeddings
             await vectorStore.InsertAsync(embeddings, cancellationToken);
         }
         #endregion

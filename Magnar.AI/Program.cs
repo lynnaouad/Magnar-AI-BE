@@ -66,20 +66,6 @@ public partial class Program
 
             configurator.SetDashboardStorage(storage);
 
-            //configurator.ConfigureDataConnection += (s, e) =>
-            //{
-            //    if (e.ConnectionName == "Dynamic") // must match the ConnectionName you set in GenerateDashboard
-            //    {
-            //        e.ConnectionParameters = new MsSqlConnectionParameters(
-            //            "LYNN\\SQL2025",
-            //            "RecruitmentDbTest",
-            //            "sa",
-            //            "lynnaouad",
-            //            MsSqlAuthorizationType.SqlServer
-            //        );
-            //    }
-            //};
-
             return configurator;
         });
 

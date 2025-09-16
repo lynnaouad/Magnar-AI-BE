@@ -3,7 +3,6 @@ using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Models.Responses.VectorSearch;
 using Magnar.AI.Entities.Abstraction;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.SqlServer;
@@ -138,4 +137,50 @@ public class VectorStoreManager<T> : IVectorStoreManager<T>
             Log.Error(ex, ex.Message);
         }
     }
+
+    public async Task<IEnumerable<string>> ListIdsAsync(Dictionary<string, object> filters, CancellationToken cancellationToken = default)
+    {
+        var ids = new List<string>();
+
+        if (!vectorConfiguration.EnableVectors || !await collection.CollectionExistsAsync(cancellationToken))
+        {
+            return ids;
+        }
+
+        try
+        {
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync(cancellationToken);
+
+            var command = connection.CreateCommand();
+
+            var conditions = new List<string>();
+            int index = 0;
+
+            foreach (var kvp in filters)
+            {
+                var paramName = $"@p{index++}";
+                command.Parameters.AddWithValue(paramName, kvp.Value ?? DBNull.Value);
+                conditions.Add($"{kvp.Key} = {paramName}");
+            }
+
+            command.CommandText = $@"
+            SELECT [Id] 
+            FROM [{Constants.Database.Schemas.Default}].[{typeof(T).Name}]
+            {(conditions.Count != 0 ? " WHERE " + string.Join(" AND ", conditions) : string.Empty)}";
+
+            using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                ids.Add(reader.GetString(0));
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, ex.Message);
+        }
+
+        return ids;
+    }
+
 }

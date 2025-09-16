@@ -65,20 +65,26 @@ namespace Magnar.AI.Application.Managers
                     : string.Empty;
 
                 // Parse description line
-                var descMatch = Regex.Match(chunk, @"^Description:\s*(.*)$", RegexOptions.Multiline);
-                var desc = descMatch.Success ? descMatch.Groups[1].Value.Trim() : string.Empty;
+                var tableDescMatch = Regex.Match(chunk, @"^Description:\s*(.*)$", RegexOptions.Multiline);
+                var tableDesc = tableDescMatch.Success ? tableDescMatch.Groups[1].Value.Trim() : string.Empty;
 
                 // Treat "Columns" / "Columns:" as no description
-                if (Regex.IsMatch(desc, @"^columns:?$", RegexOptions.IgnoreCase))
+                if (Regex.IsMatch(tableDesc, @"^columns:?$", RegexOptions.IgnoreCase))
                 {
-                    desc = string.Empty;
+                    tableDesc = string.Empty;
                 }
 
-                // Detect if there are column comments
-                var hasColComments = Regex.IsMatch(chunk, @"- \[[^\]]+\]\s*:\s*\S");
+                var colMatches = Regex.Matches(chunk, @"- \[(?<col>[^\]]+)\]\r?\nDescription\s*:?(?<desc>(?:(?!^- \[).*\r?\n?)*)", RegexOptions.Multiline);
+                var columnDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (Match m in colMatches)
+                {
+                    var col = m.Groups["col"].Value;
+                    var desc = m.Groups["desc"].Value.Trim();
+                    columnDescriptions[col] = desc;
+                }
 
-                // Determine whether this block has any comments at all
-                bool hasComments = !string.IsNullOrWhiteSpace(desc) || hasColComments;
+                bool hasComments = !string.IsNullOrWhiteSpace(tableDesc) ||
+                                          columnDescriptions.Values.Any(v => !string.IsNullOrWhiteSpace(v));
 
                 // Build block
                 blocks.Add(new SelectedTableBlock
@@ -107,13 +113,12 @@ namespace Magnar.AI.Application.Managers
             // Read existing file content
             var all = await File.ReadAllTextAsync(path);
 
-            // Normalize spacing: collapse 3+ newlines into exactly 2
-            all = Regex.Replace(all.Trim(), @"(\r?\n){3,}", Environment.NewLine + Environment.NewLine);
-
             foreach (var req in requests)
             {
-                await AppendOrReplaceBlockAsync(all, path, req, connectionId);
+                all = await AppendOrReplaceBlockAsync(all, req);
             }
+
+            await File.WriteAllTextAsync(path, all);
         }
 
         public async Task CleanupOrphanedBlocksAsync(int connectionId, IEnumerable<string> existingDbTables)
@@ -157,55 +162,83 @@ namespace Magnar.AI.Application.Managers
         #region Private Methods
         private string GetFilePath(int connectionId) => Path.Combine(baseFolder, $"annotations_{connectionId}.txt");
 
-        private async Task AppendOrReplaceBlockAsync(string all,string path, TableAnnotationRequest req, int connectionId)
+        private async Task<string> AppendOrReplaceBlockAsync(string all, TableAnnotationRequest req)
         {
-            // Build block text in the exact format
             var sb = new StringBuilder();
+
             sb.AppendLine($"Table: {req.FullTableName}");
-            sb.AppendLine($"Description: {req.TableDescription?.Trim() ?? string.Empty}");
+
+            // --- Table description (multi-line, preserve blank lines) ---
+            var tableDesc = (req.TableDescription ?? string.Empty).Replace("\r\n", "\n");
+            var tdLines = tableDesc.Split('\n');
+            if (tdLines.Length > 0 && !(tdLines.Length == 1 && string.IsNullOrWhiteSpace(tdLines[0])))
+            {
+                sb.AppendLine($"Description: {tdLines[0]}");
+                for (int i = 1; i < tdLines.Length; i++)
+                {
+                    sb.AppendLine(tdLines[i]); // preserve blank lines
+                }                
+            }
+            else
+            {
+                sb.AppendLine("Description:");
+            }
+
             sb.AppendLine("Columns:");
 
-            // Add each column, sorted by column name (to keep order consistent)
-            foreach (var (col, comment) in req.ColumnComments.OrderBy(kv => kv.Key))
+            // --- Column descriptions (multi-line, preserve blank lines) ---
+            foreach (var kv in req.ColumnComments.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
             {
-                var suffix = string.IsNullOrWhiteSpace(comment) ? string.Empty : $" : {comment}";
-                sb.AppendLine($"- [{col}]{suffix}");
-            }
+                var col = kv.Key;
+                var comment = (kv.Value ?? string.Empty).Replace("\r\n", "\n");
+                var cLines = comment.Split('\n');
 
-            // Final block with guaranteed trailing newline
-            var newBlock = sb.ToString().TrimEnd();
+                sb.AppendLine($"- [{col}]");
 
-            // Try to replace existing block
-            bool replaced = false;
-            if (!string.IsNullOrWhiteSpace(all))
-            {
-                all = Regex.Replace(
-                    all,
-                    Regex.Escape($"Table: {req.FullTableName}") + @"[\s\S]*?(?=(?:\r?\n){2}|\z)",
-                    newBlock,
-                    RegexOptions.Multiline);
-
-                replaced = all.Contains(newBlock);
-            }
-
-            // If not replaced → append to the end
-            if (!replaced)
-            {
-                if (!string.IsNullOrWhiteSpace(all))
+                if (cLines.Length > 0 && !(cLines.Length == 1 && string.IsNullOrWhiteSpace(cLines[0])))
                 {
-                    all = all.TrimEnd() + Environment.NewLine + Environment.NewLine + newBlock;
+                    sb.AppendLine($"Description: {cLines[0]}");
+                    for (int i = 1; i < cLines.Length; i++)
+                    {
+                        sb.AppendLine(cLines[i]); // preserve blank lines
+                    }           
                 }
                 else
                 {
-                    all = newBlock;
+                    sb.AppendLine("Description:");
                 }
             }
 
-            // Normalize spacing: ensure only 2 empty lines between blocks
-            all = Regex.Replace(all.Trim(), @"(\r?\n){3,}", Environment.NewLine + Environment.NewLine);
+            // Ensure block ends with one newline
+            var newBlock = sb.ToString().TrimEnd('\r', '\n') + Environment.NewLine;
 
-            // Save back to the file
-            await File.WriteAllTextAsync(path, all + Environment.NewLine);
+            // --- Replace from this header until the next "Table:" header (or EOF) ---
+            var pattern = $@"^Table:\s*{Regex.Escape(req.FullTableName)}[\s\S]*?(?=^\s*Table:\s*\[|\z)";
+            var re = new Regex(pattern, RegexOptions.Multiline);
+
+            if (re.IsMatch(all))
+            {
+                all = re.Replace(all, newBlock, 1);
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(all) && !all.EndsWith(Environment.NewLine + Environment.NewLine))
+                {
+                    all = all.TrimEnd('\r', '\n') + Environment.NewLine + Environment.NewLine;
+                }
+                all += newBlock;
+            }
+
+            // Ensure between-table spacing = exactly 2 newlines
+            all = Regex.Replace(all, @"(\r?\n){2,}(?=Table:)", Environment.NewLine + Environment.NewLine);
+
+            // Collapse 2+ newlines elsewhere into 1 (but not before a Table:)
+            all = Regex.Replace(all, @"(\r?\n){2,}(?!Table:)", Environment.NewLine);
+
+            // Remove trailing newlines at EOF (optional)
+            all = Regex.Replace(all, @"(\r?\n)+\z", Environment.NewLine);
+
+            return all;
         }
         #endregion
     }

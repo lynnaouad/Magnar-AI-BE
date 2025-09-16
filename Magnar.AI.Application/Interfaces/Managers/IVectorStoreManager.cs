@@ -35,4 +35,6 @@ public interface IVectorStoreManager<T> where T : VectorStoreBase
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns> <see cref="VectorSearchResponse"/> containing a collection of <see cref="VectorSearchResult{T}"/> containing the search results.</returns>
     Task<VectorSearchResponse<T>> VectorSearchAsync(string prompt, int top, VectorSearchOptions<T> searchOptions, CancellationToken cancellationToken = default);
+
+    Task<IEnumerable<string>> ListIdsAsync(Dictionary<string, object> filters, CancellationToken cancellationToken = default);
 }

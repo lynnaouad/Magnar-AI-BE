@@ -90,6 +90,11 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
             return Result<string>.CreateFailure([new(Constants.Errors.GenerateDashboardError)]);
         }
 
+        if (!result.Success)
+        {
+            return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboardUpdateSchema)]);
+        }
+
         var safe = IsSafeSelectQuery(result.Sql);
         if (!safe)
         {
@@ -219,27 +224,6 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
 
                 dashboardItem = grid;
                 break;
-
-            case DashboardTypes.Pivot:
-                {
-                    var pivot = new PivotDashboardItem
-                    {
-                        ComponentName = "dynamicPivot",
-                        Name = "AI Generated Pivot",
-                        DataSource = sqlDataSource,
-                        DataMember = Constants.Dashboards.DynamicQuery,
-                    };
-
-                    if (columns.Count() >= 3)
-                    {
-                        pivot.Rows.Add(new Dimension(columns.ElementAt(0)));
-                        pivot.Columns.Add(new Dimension(columns.ElementAt(1)));
-                        pivot.Values.Add(new Measure(columns.ElementAt(2)));
-                    }
-
-                    dashboardItem = pivot;
-                    break;
-                }
 
             case DashboardTypes.TreeMap:
                 {
