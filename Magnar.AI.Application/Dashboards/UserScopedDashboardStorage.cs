@@ -89,7 +89,7 @@ public class UserScopedDashboardStorage : IDashboardStorage
 
         if (!keys.Any())
         {
-            throw new InvalidOperationException("Dashboard not found for this user.");
+            return string.Empty;
         }
 
         var lastKey = keys.OrderByDescending(k => k).First();

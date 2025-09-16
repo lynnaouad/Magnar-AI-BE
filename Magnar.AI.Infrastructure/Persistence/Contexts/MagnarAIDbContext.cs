@@ -1,6 +1,7 @@
 ﻿using Duende.IdentityServer.Models;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Infrastructure.Interceptors;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using System.Reflection;
@@ -9,7 +10,7 @@ namespace Magnar.AI.Infrastructure.Persistence.Contexts;
 
 public class MagnarAIDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int,
       IdentityUserClaim<int>, IdentityUserRole<int>, IdentityUserLogin<int>,
-      IdentityRoleClaim<int>, IdentityUserToken<int>>, IMagnarAIDbContext
+      IdentityRoleClaim<int>, IdentityUserToken<int>>, IMagnarAIDbContext, IDataProtectionKeyContext
 {
     private readonly AuditableEntityInterceptor auditableEntityInterceptor;
 
@@ -22,6 +23,8 @@ public class MagnarAIDbContext : IdentityDbContext<ApplicationUser, IdentityRole
     public DbSet<PersistedGrant> UserGrants => Set<PersistedGrant>();
 
     public DbSet<Connection> Connection => Set<Connection>();
+
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

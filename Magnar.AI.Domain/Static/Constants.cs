@@ -166,6 +166,7 @@ public static class Constants
             public const string UserTokens = "UserTokens";
             public const string Roles = "Roles";
             public const string RoleClaims = "RoleClaims";
+            public const string DataProtectionKeys = "DataProtectionKeys";
         }
 
         public static class Schemas

@@ -1,19 +1,22 @@
 ﻿using DevExpress.AspNetCore;
 using DevExpress.DashboardAspNetCore;
 using DevExpress.DashboardWeb;
-using DevExpress.DataAccess.ConnectionParameters;
 using Magnar.AI;
 using Magnar.AI.Application;
 using Magnar.AI.Application.Dashboards;
 using Magnar.AI.Extensions;
 using Magnar.AI.Infrastructure.Extensions;
+using Magnar.AI.Infrastructure.Persistence.Contexts;
 using Magnar.Recruitment.Infrastructure;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.SemanticKernel;
 using Serilog;
+using System;
 using System.Threading.Tasks;
 
 public partial class Program
@@ -37,7 +40,14 @@ public partial class Program
             },
             lifetime: ServiceLifetime.Singleton);
 
-        builder.Services.AddDataProtection();
+        var urlsConfig = builder.Configuration.GetSection("UrlsConfiguration");
+
+        var uri = new Uri(urlsConfig.GetValue<string>("Authority"));
+        var uniqueDeployName = "Magnar_AI_" + uri.Port;
+
+        builder.Services.AddDataProtection()
+                        .PersistKeysToDbContext<MagnarAIDbContext>()
+                        .SetApplicationName(uniqueDeployName);
 
         builder.Services.AddInfrastructureServices(builder.Configuration);
 

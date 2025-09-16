@@ -40,7 +40,13 @@ public class ChangeDashboardTypeCommandHandler : IRequestHandler<ChangeDashboard
             return Result<string>.CreateFailure([new(Errors.CannotGenerateDashboard)]);
         }
 
-        var dashboardId = dashboardManager.GetLastDashboardKey();   
+        var dashboardId = dashboardManager.GetLastDashboardKey();
+
+        if (string.IsNullOrEmpty(dashboardId))
+        {
+            return Result<string>.CreateSuccess(dashboardId);
+        }
+
         var dashboardXml = dashboardManager.LoadDashboard(dashboardId);
 
         var dashboard = new DevExpress.DashboardCommon.Dashboard() { };
