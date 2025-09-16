@@ -1,8 +1,9 @@
-﻿using System.Collections.Concurrent;
-using System.IdentityModel.Claims;
-using System.Xml.Linq;
-using DevExpress.DashboardWeb;
+﻿using DevExpress.DashboardWeb;
 using Microsoft.AspNetCore.Http;
+using System.Collections.Concurrent;
+using System.IdentityModel.Claims;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace Magnar.AI.Application.Dashboards;
 
@@ -79,6 +80,21 @@ public class UserScopedDashboardStorage : IDashboardStorage
         }
 
         return removed; // number of dashboards removed
+    }
+
+    public string GetLastDashboardKey()
+    {
+        var prefix = GetUserKey() + "_";
+        var keys = _dashboards.Keys.Where(k => k.StartsWith(prefix)).ToList();
+
+        if (!keys.Any())
+        {
+            throw new InvalidOperationException("Dashboard not found for this user.");
+        }
+
+        var lastKey = keys.OrderByDescending(k => k).First();
+
+        return lastKey.Substring(prefix.Length);
     }
 
     #region Private Methods

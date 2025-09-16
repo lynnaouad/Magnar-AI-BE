@@ -1,9 +1,4 @@
-﻿using DevExpress.DashboardCommon;
-using DevExpress.DataAccess.ConnectionParameters;
-using DevExpress.DataAccess.Sql;
-using Magnar.AI.Application.Dashboards;
-using Magnar.AI.Application.Dto.AI.SemanticSearch;
-using Magnar.AI.Application.Dto.Connection;
+﻿using Magnar.AI.Application.Dto.AI.SemanticSearch;
 using Magnar.AI.Application.Dto.Dashboard;
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
@@ -22,7 +17,7 @@ public sealed record GenerateDashboardCommand(DashboardPromptDto parameters) : I
 public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboardCommand, Result<string>>
 {
     #region Members
-    private readonly UserScopedDashboardStorage dashboardStorage;
+    private readonly IDashboardManager dashboardManager;
     private readonly IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore;
     private readonly IAIManager aiManager;
     private readonly IUnitOfWork unitOfWork;
@@ -31,12 +26,12 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
     #region Constructor
 
    public GenerateDashboardCommandHandler(
-        UserScopedDashboardStorage dashboardStorage,
+        IDashboardManager dashboardManager,
         IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore,
         IAIManager aiManager,
         IUnitOfWork unitOfWork)
     {
-        this.dashboardStorage = dashboardStorage;
+        this.dashboardManager = dashboardManager;
         this.vectorStore = vectorStore;
         this.aiManager = aiManager;
         this.unitOfWork = unitOfWork;
@@ -68,14 +63,12 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
 
         // Load prompt messages
         var systemMessage = await PromptLoader.LoadPromptAsync("generate-dashboard-sql-system.txt", Constants.Folders.DashboardPrompts);
-
         var userMessage = await PromptLoader.LoadPromptAsync("generate-dashboard-sql-user.txt", Constants.Folders.DashboardPrompts);
-
 
         systemMessage = string.Format(systemMessage, string.Join("\n\n", response.SearchResults.Select(r => r.Record.Text)), request.parameters.ChartType);
         userMessage = string.Format(userMessage, request.parameters.Prompt);
 
-        // Generaste SQL Query
+        // Generate SQL Query
         var seamanticSearchResult = await aiManager.SemanticSearchAsync(systemMessage, userMessage, cancellationToken);
 
         DatabaseSchemaSqlDto result;
@@ -95,29 +88,26 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboardUpdateSchema)]);
         }
 
-        var safe = IsSafeSelectQuery(result.Sql);
-        if (!safe)
+        if (!IsSafeSelectQuery(result.Sql))
         {
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
         }
 
-        var dashboard = CreateDashboard(defaultConnection.Details.SqlServerConfiguration, result.Sql, request.parameters.ChartType, result.Columns ?? []);
+        var dashboard = dashboardManager.CreateDashboard(defaultConnection.Details.SqlServerConfiguration, result.Sql, request.parameters.ChartType, result.Columns);
 
-        // 7. Return dashboard id to client
         XDocument xdoc = dashboard.SaveToXDocument();
 
         var dashboardId = $"AI_{Guid.NewGuid():N}";
 
-        // Clen old dashboards from memory
-        dashboardStorage.RemoveAllForCurrentUser();
+        // Claen old dashboards from memory
+        dashboardManager.RemoveAllForCurrentUser();
 
-        dashboardStorage.SaveDashboard(dashboardId, xdoc);
+        dashboardManager.SaveDashboard(dashboardId, xdoc);
 
         return Result<string>.CreateSuccess(dashboardId);
     }
 
     #region Private Methods
-
     private bool IsSafeSelectQuery(string sql)
     {
         if (string.IsNullOrWhiteSpace(sql))
@@ -146,125 +136,6 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
         }
 
         return true;
-    }
-
-    private DevExpress.DashboardCommon.Dashboard CreateDashboard(SqlServerConnectionDetailsDto defaultConnection, string sqlQuery, DashboardTypes dashboardType, IEnumerable<string> columns)
-    {
-        var dashboard = new DevExpress.DashboardCommon.Dashboard();
-
-        var connectionParams = new MsSqlConnectionParameters(
-           defaultConnection.InstanceName,
-           defaultConnection.DatabaseName,
-           defaultConnection.Username,
-           defaultConnection.Password,
-           MsSqlAuthorizationType.SqlServer
-       )
-        {
-            TrustServerCertificate = DevExpress.Utils.DefaultBoolean.True
-        };
-
-
-        // Create a SQL data source using the AI-generated SQL
-        DashboardSqlDataSource sqlDataSource = new DashboardSqlDataSource("DynamicSqlDataSource")
-        {
-            ConnectionParameters = connectionParams,
-        };
-
-        CustomSqlQuery query = new CustomSqlQuery(Constants.Dashboards.DynamicQuery, sqlQuery);
-        sqlDataSource.Queries.Add(query);
-
-        // 4. Add data source to dashboard
-        dashboard.DataSources.Add(sqlDataSource);
-
-        DashboardItem dashboardItem;
-
-        switch (dashboardType)
-        {
-            case DashboardTypes.Chart:
-                var chart = new ChartDashboardItem
-                {
-                    ComponentName = "dynamicChart",
-                    Name = "AI Generated Chart",
-                    DataSource = sqlDataSource,
-                    DataMember = Constants.Dashboards.DynamicQuery,
-                };
-
-                // X axis: the dimension
-                chart.Arguments.Add(new Dimension(Constants.Dashboards.Category));
-
-                // Y axis: the measure via a series
-                var value = new Measure(Constants.Dashboards.Value);
-
-                // choose a simple series type; change to Line/Area if you want
-                var series = new SimpleSeries(SimpleSeriesType.Bar)
-                {
-                    Value = value,
-                };
-
-                var pane = new ChartPane();
-                pane.Series.Add(series);
-                chart.Panes.Add(pane);
-
-                dashboardItem = chart;
-                break;
-
-            case DashboardTypes.Grid:
-                var grid = new GridDashboardItem
-                {
-                    ComponentName = "dynamicGrid",
-                    Name = "AI Generated Grid",
-                    DataSource = sqlDataSource,
-                    DataMember = Constants.Dashboards.DynamicQuery,
-                };
-
-                foreach (var col in columns)
-                {
-                    grid.Columns.Add(new GridDimensionColumn(new Dimension(col)));
-                }
-
-                dashboardItem = grid;
-                break;
-
-            case DashboardTypes.TreeMap:
-                {
-                    var tree = new TreemapDashboardItem
-                    {
-                        ComponentName = "dynamicTreeMap",
-                        Name = "AI Generated TreeMap",
-                        DataSource = sqlDataSource,
-                        DataMember = Constants.Dashboards.DynamicQuery,
-                    };
-
-                    tree.Arguments.Add(new Dimension(Constants.Dashboards.Category));
-                    tree.Values.Add(new Measure(Constants.Dashboards.Value));
-                    dashboardItem = tree;
-                    break;
-                }
-
-            case DashboardTypes.Pie:
-            default:
-                var pie = new PieDashboardItem
-                {
-                    ComponentName = "dynamicPieChart",
-                    Name = "AI Generated Pie",
-                    DataSource = sqlDataSource,
-                    DataMember = Constants.Dashboards.DynamicQuery,
-                };
-
-                pie.Arguments.Add(new Dimension(Constants.Dashboards.Category));
-                pie.Values.Add(new Measure(Constants.Dashboards.Value));
-                dashboardItem = pie;
-                break;
-        }
-
-        dashboard.Items.Add(dashboardItem);
-
-        // 6. Layout
-        DashboardLayoutGroup root = new DashboardLayoutGroup();
-        root.ChildNodes.Add(new DashboardLayoutItem(dashboardItem) { Weight = 100 });
-        dashboard.LayoutRoot = root;
-
-        return dashboard;
     }
     #endregion
 }
