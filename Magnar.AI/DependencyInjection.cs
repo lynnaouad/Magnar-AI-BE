@@ -197,6 +197,7 @@ internal static class DependencyInjection
                     LifetimeValidator = (_, expires, _, _) => expires >= DateTime.UtcNow,
                 };
 
+                options.RequireHttpsMetadata = false;
                 options.Authority = urlsConfig.Authority;
             });
 
