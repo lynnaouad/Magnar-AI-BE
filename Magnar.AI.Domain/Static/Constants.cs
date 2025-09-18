@@ -65,6 +65,11 @@ public static class Constants
         public const string RootPath = "ClientApp";
     }
 
+    public readonly struct RouteParameters
+    {
+        public const string WorkspaceParameterName = "WorkspaceId";
+    }
+
     public static class Localization
     {
         public const string DirectoryPath = "Resources";

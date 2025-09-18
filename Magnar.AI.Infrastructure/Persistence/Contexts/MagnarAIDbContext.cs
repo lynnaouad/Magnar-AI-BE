@@ -22,7 +22,7 @@ public class MagnarAIDbContext : IdentityDbContext<ApplicationUser, IdentityRole
 
     public DbSet<PersistedGrant> UserGrants => Set<PersistedGrant>();
 
-    public DbSet<Connection> Connection => Set<Connection>();
+    public DbSet<Provider> Connection => Set<Provider>();
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

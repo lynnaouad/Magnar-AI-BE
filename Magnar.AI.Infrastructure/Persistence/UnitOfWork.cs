@@ -18,9 +18,13 @@ public class UnitOfWork : IUnitOfWork
         this.serviceProvider = serviceProvider;
     }
 
+    public int WorkspaceId { get; set; }
+
+    public IRepository<Workspace> WorkspaceRepository => serviceProvider.GetRequiredService<IRepository<Workspace>>();
+
     public IIdentityRepository IdentityRepository => serviceProvider.GetRequiredService<IIdentityRepository>();
 
-    public IConnectionRepository ConnectionRepository => serviceProvider.GetRequiredService<IConnectionRepository>();
+    public IProviderRepository ProviderRepository => serviceProvider.GetRequiredService<IProviderRepository>();
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

@@ -4,9 +4,13 @@ namespace Magnar.AI.Application.Interfaces.Infrastructure;
 
 public interface IUnitOfWork : IAsyncDisposable, IDisposable
 {
+    int WorkspaceId { get; set; }
+
+    IRepository<Workspace> WorkspaceRepository { get; }
+
     IIdentityRepository IdentityRepository { get; }
 
-    IConnectionRepository ConnectionRepository { get; }
+    IProviderRepository ProviderRepository { get; }
 
     /// <summary>
     /// Persist set of changes into the data store.

@@ -1,13 +1,14 @@
 ﻿using Magnar.AI.Application.Dto.Schema;
 using Magnar.AI.Application.Features.DatabaseSchema.Commands;
 using Magnar.AI.Application.Features.DatabaseSchema.Queries;
+using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Magnar.AI.Controllers;
 
+[Authorize]
 public class DatabaseSchemaController : BaseController
 {
     public DatabaseSchemaController(IMediator mediator) : base(mediator)

@@ -2,7 +2,6 @@
 using Magnar.AI.Application.Dto.Dashboard;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
-using static Magnar.AI.Static.Constants;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
@@ -28,18 +27,6 @@ public class ChangeDashboardTypeCommandHandler : IRequestHandler<ChangeDashboard
 
     public async Task<Result<string>> Handle(ChangeDashboardTypeCommand request, CancellationToken cancellationToken)
     {
-        // Check connection
-        var defaultConnection = await unitOfWork.ConnectionRepository.GetDefaultConnectionAsync(cancellationToken);
-        if(defaultConnection is null)
-        {
-            return Result<string>.CreateFailure([new(Errors.NoDefaultConnectionConfigured)]);
-        }
-
-        if(defaultConnection.Provider != ProviderTypes.SqlServer && defaultConnection?.Details?.SqlServerConfiguration != null)
-        {
-            return Result<string>.CreateFailure([new(Errors.CannotGenerateDashboard)]);
-        }
-
         var dashboardId = dashboardManager.GetLastDashboardKey();
 
         if (string.IsNullOrEmpty(dashboardId))

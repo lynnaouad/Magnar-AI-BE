@@ -43,8 +43,8 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 
         public async Task<Result> Handle(AnnotateDatabaseSchemaCommand request, CancellationToken cancellationToken)
         {
-            var defaultConnection = await unitOfWork.ConnectionRepository.FirstOrDefaultAsync(x => x.IsDefault, false, cancellationToken);
-            if(defaultConnection is null || defaultConnection.Provider != ProviderTypes.SqlServer)
+            var defaultConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x => x.Type == ProviderTypes.SqlServer, false, cancellationToken);
+            if(defaultConnection is null)
             {
                 return Result.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
             }

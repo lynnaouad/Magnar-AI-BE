@@ -1,14 +1,14 @@
 ﻿using DevExpress.DashboardCommon;
-using Magnar.AI.Application.Dto.Connection;
+using Magnar.AI.Application.Dto.Providers;
 using System.Xml.Linq;
 
 namespace Magnar.AI.Application.Interfaces.Managers
 {
     public interface IDashboardManager
     {
-        Dashboard CreateDashboard(SqlServerConnectionDetailsDto defaultConnection, string sqlQuery, DashboardTypes dashboardType, IEnumerable<string> columns);
+        Dashboard CreateDashboard(SqlServerProviderDetailsDto defaultConnection, string sqlQuery, DashboardTypes dashboardType, IEnumerable<string> columns);
 
-        DashboardSqlDataSource CreateSqlDatasource(SqlServerConnectionDetailsDto defaultConnection, string sqlQuery);
+        DashboardSqlDataSource CreateSqlDatasource(SqlServerProviderDetailsDto defaultConnection, string sqlQuery);
 
         DashboardItem CreateDashboardItem(DashboardTypes dashboardType, DashboardSqlDataSource sqlDataSource, string dataMember = Constants.Dashboards.DynamicQuery, IEnumerable<string>? columns = null);
 

@@ -1,7 +1,10 @@
-﻿using Magnar.AI.Application.Dto.Schema;
+﻿using AutoMapper;
+using Magnar.AI.Application.Dto.Providers;
+using Magnar.AI.Application.Dto.Schema;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Models;
+using Magnar.AI.Domain.Static;
 using Serilog;
 using System.Data.SqlClient;
 
@@ -11,33 +14,37 @@ namespace Magnar.AI.Infrastructure.Managers
     {
         #region Members
         private readonly IUnitOfWork unitOfWork;
+        private readonly IMapper mapper;
         #endregion
 
         #region Constrcutor
-        public SchemaManager(IUnitOfWork unitOfWork)
+        public SchemaManager(IUnitOfWork unitOfWork, IMapper mapper)
         {
             this.unitOfWork = unitOfWork;
+            this.mapper = mapper;
         }
         #endregion
 
         public async Task<Result<IEnumerable<TableDto>>> GetTablesAsync(CancellationToken cancellationToken = default)
         {
             // Get default connection
-            var defaultConnection = await unitOfWork.ConnectionRepository.GetDefaultConnectionAsync(cancellationToken);
-            if(defaultConnection is null || defaultConnection.Provider != Domain.Static.ProviderTypes.SqlServer)
+            var sqlConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x => x.Type == ProviderTypes.SqlServer, false, cancellationToken);
+            if (sqlConnection is null)
             {
                 return Result<IEnumerable<TableDto>>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
             }
 
+            var defaultConnection = mapper.Map<ProviderDto>(sqlConnection);
+
             // test default connection
-            var testSuccess = await unitOfWork.ConnectionRepository.TestSqlConnectionAsync(defaultConnection.Details.SqlServerConfiguration, cancellationToken);
+            var testSuccess = await unitOfWork.ProviderRepository.TestSqlProviderAsync(defaultConnection.Details.SqlServerConfiguration, cancellationToken);
             if (!testSuccess)
             {
                 return Result<IEnumerable<TableDto>>.CreateFailure([new(Constants.Errors.ConnectionFailed)]);
             }
 
             // Build connection string
-            var connectionString = unitOfWork.ConnectionRepository.BuildSqlServerConnectionString(defaultConnection.Details.SqlServerConfiguration);
+            var connectionString = unitOfWork.ProviderRepository.BuildSqlServerConnectionString(defaultConnection.Details.SqlServerConfiguration);
 
             var list = new List<TableDto>();
 
@@ -81,21 +88,24 @@ namespace Magnar.AI.Infrastructure.Managers
         public async Task<Result<TableInfoDto>> GetTableInfoAsync(string schema, string table, CancellationToken cancellationToken = default)
         {
             // Get default connection
-            var defaultConnection = await unitOfWork.ConnectionRepository.GetDefaultConnectionAsync(cancellationToken);
-            if (defaultConnection is null || defaultConnection.Provider != Domain.Static.ProviderTypes.SqlServer)
+            var sqlConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x=> x.Type == ProviderTypes.SqlServer, false, cancellationToken);
+            if (sqlConnection is null)
             {
                 return Result<TableInfoDto>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
             }
 
+            var defaultConnection = mapper.Map<ProviderDto>(sqlConnection);
+
             // test default connection
-            var testSuccess = await unitOfWork.ConnectionRepository.TestSqlConnectionAsync(defaultConnection.Details.SqlServerConfiguration, cancellationToken);
+            var testSuccess = await unitOfWork.ProviderRepository.TestSqlProviderAsync(defaultConnection.Details.SqlServerConfiguration, cancellationToken);
+
             if (!testSuccess)
             {
                 return Result<TableInfoDto>.CreateFailure([new(Constants.Errors.ConnectionFailed)]);
             }
 
             // Build connection string
-            var connectionString = unitOfWork.ConnectionRepository.BuildSqlServerConnectionString(defaultConnection.Details.SqlServerConfiguration);
+            var connectionString = unitOfWork.ProviderRepository.BuildSqlServerConnectionString(defaultConnection.Details.SqlServerConfiguration);
 
             // Open SQL connection
             await using var conn = new SqlConnection(connectionString);

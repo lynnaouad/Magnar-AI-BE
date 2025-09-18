@@ -49,7 +49,7 @@ public static class DependencyInjection
     private static IServiceCollection RegisterInfrastructureServices(this IServiceCollection services)
     {
         services.AddScoped<IIdentityRepository, IdentityRepository>();
-        services.AddScoped<IConnectionRepository, ConnectionRepository>();
+        services.AddScoped<IProviderRepository, ProviderRepository>();
         services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();

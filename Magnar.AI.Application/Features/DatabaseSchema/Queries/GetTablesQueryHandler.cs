@@ -23,12 +23,6 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
 
         public async Task<Result<IEnumerable<TableDto>>> Handle(GetTablesQuery request, CancellationToken cancellationToken)
         {
-            var defaultConnection = await unitOfWork.ConnectionRepository.FirstOrDefaultAsync(x => x.IsDefault, false, cancellationToken);
-            if (defaultConnection is null || defaultConnection.Provider != ProviderTypes.SqlServer)
-            {
-                return Result<IEnumerable<TableDto>>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
-            }
-
             return await schemaManager.GetTablesAsync(cancellationToken);
         }
     }

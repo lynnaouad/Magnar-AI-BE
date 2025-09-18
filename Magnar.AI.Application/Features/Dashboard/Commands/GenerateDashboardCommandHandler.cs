@@ -1,5 +1,6 @@
 ﻿using Magnar.AI.Application.Dto.AI.SemanticSearch;
 using Magnar.AI.Application.Dto.Dashboard;
+using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
@@ -21,6 +22,7 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
     private readonly IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore;
     private readonly IAIManager aiManager;
     private readonly IUnitOfWork unitOfWork;
+    private readonly IMapper mapper;
     #endregion
 
     #region Constructor
@@ -29,28 +31,27 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
         IDashboardManager dashboardManager,
         IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore,
         IAIManager aiManager,
+        IMapper mapper,
         IUnitOfWork unitOfWork)
     {
         this.dashboardManager = dashboardManager;
         this.vectorStore = vectorStore;
         this.aiManager = aiManager;
         this.unitOfWork = unitOfWork;
+        this.mapper = mapper;
     }
     #endregion
 
     public async Task<Result<string>> Handle(GenerateDashboardCommand request, CancellationToken cancellationToken)
     {
         // Check connection
-        var defaultConnection = await unitOfWork.ConnectionRepository.GetDefaultConnectionAsync(cancellationToken);
-        if(defaultConnection is null)
+        var sqlConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x => x.Type == ProviderTypes.SqlServer, false, cancellationToken);
+        if(sqlConnection is null)
         {
             return Result<string>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
         }
 
-        if(defaultConnection.Provider != ProviderTypes.SqlServer && defaultConnection?.Details?.SqlServerConfiguration != null)
-        {
-            return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
-        }
+        var defaultConnection = mapper.Map<ProviderDto>(sqlConnection);
 
         // Perform vector search to retrieve tables schema
         var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ConnectionId == defaultConnection.Id };

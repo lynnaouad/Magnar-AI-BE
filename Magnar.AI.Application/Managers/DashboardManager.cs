@@ -2,7 +2,7 @@
 using DevExpress.DataAccess.ConnectionParameters;
 using DevExpress.DataAccess.Sql;
 using Magnar.AI.Application.Dashboards;
-using Magnar.AI.Application.Dto.Connection;
+using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Interfaces.Managers;
 using System.Xml.Linq;
 
@@ -17,7 +17,7 @@ namespace Magnar.AI.Application.Managers
             this.dashboardStorage = dashboardStorage;
         }
 
-        public Dashboard CreateDashboard(SqlServerConnectionDetailsDto defaultConnection, string sqlQuery, DashboardTypes dashboardType, IEnumerable<string>? columns = null)
+        public Dashboard CreateDashboard(SqlServerProviderDetailsDto defaultConnection, string sqlQuery, DashboardTypes dashboardType, IEnumerable<string>? columns = null)
         {
             var dashboard = new Dashboard();
 
@@ -36,7 +36,7 @@ namespace Magnar.AI.Application.Managers
             return dashboard;
         }
     
-        public DashboardSqlDataSource CreateSqlDatasource(SqlServerConnectionDetailsDto defaultConnection, string sqlQuery)
+        public DashboardSqlDataSource CreateSqlDatasource(SqlServerProviderDetailsDto defaultConnection, string sqlQuery)
         {
             var connectionParams = new MsSqlConnectionParameters(
                defaultConnection.InstanceName,

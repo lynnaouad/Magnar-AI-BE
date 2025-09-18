@@ -25,8 +25,8 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
 
         public async Task<Result<IEnumerable<SelectedTableBlock>>> Handle(GetSelectedTablesQuery request, CancellationToken cancellationToken)
         {
-            var defaultConnection = await unitOfWork.ConnectionRepository.FirstOrDefaultAsync(x => x.IsDefault, false, cancellationToken);
-            if (defaultConnection is null || defaultConnection.Provider != ProviderTypes.SqlServer)
+            var defaultConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x => x.Type == ProviderTypes.SqlServer, false, cancellationToken);
+            if (defaultConnection is null)
             {
                 return Result<IEnumerable<SelectedTableBlock>>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
             }

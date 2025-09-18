@@ -1,0 +1,40 @@
+﻿using Magnar.AI.Application.Features.Providers.Commands;
+using Magnar.AI.Application.Interfaces.Infrastructure;
+
+namespace Magnar.AI.Application.Features.Providers.Validators;
+
+public class CreateProviderCommandValidator : AbstractValidator<CreateProviderCommand>
+{
+    public readonly IUnitOfWork unitOfWork;
+
+    public CreateProviderCommandValidator(IUnitOfWork unitOfWork)
+    {
+        this.unitOfWork = unitOfWork;
+    }
+
+    public override Task<ValidationResult> ValidateAsync(ValidationContext<CreateProviderCommand> context, CancellationToken cancellation = default)
+    {
+        RuleFor(x => x.Model.Name)
+            .NotEmpty()
+            .WithMessage(Constants.ValidationMessages.RequiredField);
+
+        RuleFor(x => x.Model.Provider)
+            .NotEmpty()
+            .WithMessage(Constants.ValidationMessages.RequiredField);
+
+        RuleFor(x => x.Model)
+            .Must(provider =>
+            {
+                return provider.Provider != ProviderTypes.SqlServer ||
+                       (provider.Provider == ProviderTypes.SqlServer &&
+                       provider?.Details?.SqlServerConfiguration is not null &&
+                       !string.IsNullOrEmpty(provider?.Details.SqlServerConfiguration.InstanceName) &&
+                       !string.IsNullOrEmpty(provider?.Details.SqlServerConfiguration.DatabaseName) &&
+                       !string.IsNullOrEmpty(provider?.Details.SqlServerConfiguration.Username) &&
+                       !string.IsNullOrEmpty(provider?.Details.SqlServerConfiguration.Password));
+            })
+            .WithMessage(Constants.ValidationMessages.RequiredField);
+
+        return base.ValidateAsync(context, cancellation);
+    }
+}

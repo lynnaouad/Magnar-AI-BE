@@ -23,12 +23,6 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
 
         public async Task<Result<TableInfoDto>> Handle(GetTableInfoQuery request, CancellationToken cancellationToken)
         {
-            var defaultConnection = await unitOfWork.ConnectionRepository.FirstOrDefaultAsync(x => x.IsDefault, false, cancellationToken);
-            if (defaultConnection is null || defaultConnection.Provider != ProviderTypes.SqlServer)
-            {
-                return Result<TableInfoDto>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
-            }
-
             return await schemaManager.GetTableInfoAsync(request.Schema, request.TableName, cancellationToken);
         }
     }

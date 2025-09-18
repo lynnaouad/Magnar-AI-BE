@@ -1,6 +1,11 @@
-﻿namespace Magnar.AI.Controllers;
+﻿using Magnar.AI.Extensions;
+using System.Security.Claims;
+using static Magnar.AI.Static.Constants;
+
+namespace Magnar.AI.Controllers;
 
 [Route("api/[controller]")]
+[Route($"api/{{{RouteParameters.WorkspaceParameterName}}}/[controller]")]
 [ApiController]
 [Produces(MediaTypeNames.Application.Json)]
 public abstract class BaseController : ControllerBase
@@ -10,7 +15,9 @@ public abstract class BaseController : ControllerBase
         Mediator = mediator;
     }
 
-    protected string Username { get => User?.Identity?.Name ?? string.Empty; }
+    protected string Username { get => User?.FindFirstValue(IdentityApi.ApiClaims.Username) ?? string.Empty; }
+
+    protected int WorkspaceId { get => HttpContext.GetWorkspaceId(); }
 
     protected IMediator Mediator { get; }
 }
