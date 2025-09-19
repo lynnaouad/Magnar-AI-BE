@@ -12,5 +12,5 @@ public class DatabaseSchemaEmbedding : VectorStoreBase
     public int WorkspaceId { get; set; }
 
     [VectorStoreData]
-    public int ConnectionId { get; set; }
+    public int ProviderId { get; set; }
 }
