@@ -6,6 +6,12 @@
 
         public string TableName { get; set; } = string.Empty;
 
-        public string FullName => $"[{SchemaName}].[{TableName}]";
+        public string FullName { get; set; } = string.Empty;
+
+        public string TableDescription { get; set; } = string.Empty;
+
+        public bool IsSelected { get; set; }
+
+        public List<ColumnInfoDto> Columns { get; set; } = [];
     }
 }

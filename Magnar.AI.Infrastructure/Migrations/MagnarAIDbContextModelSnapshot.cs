@@ -202,7 +202,7 @@ namespace Magnar.AI.Infrastructure.Migrations
 
                     b.HasIndex("WorkspaceId");
 
-                    b.ToTable("Connection");
+                    b.ToTable("Provider");
                 });
 
             modelBuilder.Entity("Magnar.AI.Domain.Entities.Workspace", b =>

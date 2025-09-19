@@ -48,7 +48,6 @@ public static class DependencyInjection
     {
         services.AddScoped<IAIManager, AIManager>();
         services.AddScoped<IDashboardManager, DashboardManager>();
-        services.AddScoped<IAnnotationFileManager, AnnotationFileManager>();
 
         return services;
     }

@@ -6,11 +6,11 @@ namespace Magnar.AI.Application.Dto.Providers
     {
         public int Id { get; set; }
 
+        public int WorkspaceId { get; set; }
+
         public string Name { get; set; } = string.Empty;
 
-        public ProviderTypes Provider { get; set; }
-
-        public bool IsDefault { get; set; }
+        public ProviderTypes Type { get; set; }
 
         public ProviderDetailsDto? Details { get; set; }
 

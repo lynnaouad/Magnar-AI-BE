@@ -18,15 +18,15 @@ public class CreateProviderCommandValidator : AbstractValidator<CreateProviderCo
             .NotEmpty()
             .WithMessage(Constants.ValidationMessages.RequiredField);
 
-        RuleFor(x => x.Model.Provider)
+        RuleFor(x => x.Model.Type)
             .NotEmpty()
             .WithMessage(Constants.ValidationMessages.RequiredField);
 
         RuleFor(x => x.Model)
             .Must(provider =>
             {
-                return provider.Provider != ProviderTypes.SqlServer ||
-                       (provider.Provider == ProviderTypes.SqlServer &&
+                return provider.Type != ProviderTypes.SqlServer ||
+                       (provider.Type == ProviderTypes.SqlServer &&
                        provider?.Details?.SqlServerConfiguration is not null &&
                        !string.IsNullOrEmpty(provider?.Details.SqlServerConfiguration.InstanceName) &&
                        !string.IsNullOrEmpty(provider?.Details.SqlServerConfiguration.DatabaseName) &&

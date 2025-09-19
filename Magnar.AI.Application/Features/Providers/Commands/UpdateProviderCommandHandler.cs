@@ -22,7 +22,7 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
         public async Task<Result> Handle(UpdateProviderCommand request, CancellationToken cancellationToken)
         {
-            if (request.Model.Provider == ProviderTypes.SqlServer && request.Model.Details is not null)
+            if (request.Model.Type == ProviderTypes.SqlServer && request.Model.Details is not null)
             {
                 var protectedPassword = unitOfWork.ProviderRepository.ProtectPassword(request.Model.Details.SqlServerConfiguration.Password);
 

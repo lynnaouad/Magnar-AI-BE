@@ -4,48 +4,32 @@ using Magnar.AI.Application.Interfaces.Managers;
 
 namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
 {
-    public sealed record GetSelectedTablesQuery() : IRequest<Result<IEnumerable<SelectedTableBlock>>>;
+    public sealed record GetSelectedTablesQuery(int WorkspaceId, int ProviderId) : IRequest<Result<IEnumerable<TableDto>>>;
 
-    public class GetSelectedTablesQueryHandler : IRequestHandler<GetSelectedTablesQuery, Result<IEnumerable<SelectedTableBlock>>>
+    public class GetSelectedTablesQueryHandler : IRequestHandler<GetSelectedTablesQuery, Result<IEnumerable<TableDto>>>
     {
         #region Members
-        private readonly IAnnotationFileManager annotationFileManager;
         private readonly IUnitOfWork unitOfWork;
         private readonly ISchemaManager schemaManager;
+        private readonly IMapper mapper;
         #endregion
 
         #region Constructor
-        public GetSelectedTablesQueryHandler(IAnnotationFileManager annotationFileManager, IUnitOfWork unitOfWork, ISchemaManager schemaManager)
+        public GetSelectedTablesQueryHandler( IUnitOfWork unitOfWork, ISchemaManager schemaManager, IMapper mapper)
         {
-            this.annotationFileManager = annotationFileManager;
             this.unitOfWork = unitOfWork;
             this.schemaManager = schemaManager;
+            this.mapper = mapper;
         }
         #endregion
 
-        public async Task<Result<IEnumerable<SelectedTableBlock>>> Handle(GetSelectedTablesQuery request, CancellationToken cancellationToken)
+        public async Task<Result<IEnumerable<TableDto>>> Handle(GetSelectedTablesQuery request, CancellationToken cancellationToken)
         {
-            var defaultConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x => x.Type == ProviderTypes.SqlServer, false, cancellationToken);
-            if (defaultConnection is null)
-            {
-                return Result<IEnumerable<SelectedTableBlock>>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
-            }
+            await schemaManager.RemoveMissingTablesAsync(request.WorkspaceId, request.ProviderId, cancellationToken);
 
-            // Get All database tables
-            var databaseTablesResult = await schemaManager.GetTablesAsync(cancellationToken);
-            if (!databaseTablesResult.Success)
-            {
-                return Result<IEnumerable<SelectedTableBlock>>.CreateFailure([new(Constants.Errors.ErrorOccured)]);
-            }
+            var list = await schemaManager.MergeSelectionsFromFileAsync(request.WorkspaceId, request.ProviderId, cancellationToken);
 
-            // Clean old tables that may be deleted or renamed
-            var existingDbTables = databaseTablesResult.Value.Select(t => $"[{t.SchemaName}].[{t.TableName}]");
-            await annotationFileManager.CleanupOrphanedBlocksAsync(defaultConnection.Id, existingDbTables);
-
-            // Get selected tables
-            var result = await annotationFileManager.ReadAllBlocksAsync(defaultConnection.Id);
-
-            return Result<IEnumerable<SelectedTableBlock>>.CreateSuccess(result);
+            return Result<IEnumerable<TableDto>>.CreateSuccess(list);
         }
     }
 }

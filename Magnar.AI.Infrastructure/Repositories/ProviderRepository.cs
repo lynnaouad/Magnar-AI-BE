@@ -67,10 +67,7 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
 
         var mappedProviders = mapper.Map<IEnumerable<ProviderDto>>(result.Value);
 
-        mappedProviders = mappedProviders.Select(x =>
-        {
-            return HandlePasswords(x);
-        });
+        mappedProviders = mappedProviders.Select(HandlePasswords);
 
         return new OdataResponse<ProviderDto>
         {
@@ -94,7 +91,7 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
             Password = details.Password,
             TrustServerCertificate = true,
             MultipleActiveResultSets = true,
-            ConnectTimeout = 30
+            ConnectTimeout = 30,
         };
 
         return builder.ConnectionString;
@@ -113,7 +110,7 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
     #region Private Methods
     private ProviderDto HandlePasswords(ProviderDto connection)
     {
-        if (connection.Provider == ProviderTypes.SqlServer && connection.Details?.SqlServerConfiguration is not null)
+        if (connection.Type == ProviderTypes.SqlServer && connection.Details?.SqlServerConfiguration is not null)
         {
             connection.Details.SqlServerConfiguration.Password = UnprotectPassword(connection.Details.SqlServerConfiguration.Password);
         }

@@ -2,6 +2,7 @@
 using Magnar.AI.Application.Features.Providers.Commands;
 using Magnar.AI.Application.Features.Providers.Queries;
 using Magnar.AI.Domain.Entities;
+using Magnar.AI.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OData.Query;
 using System.Threading;
@@ -45,13 +46,13 @@ public class ProvidersController : BaseController
     [HttpPost]
     public async Task<IActionResult> CreateAsync([FromBody] ProviderDto provider, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new CreateProviderCommand(provider), cancellationToken);
+        var result = await Mediator.Send(new CreateProviderCommand(provider, HttpContext.GetWorkspaceId()), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
         }
 
-        return Ok();
+        return Ok(result.Value);
     }
 
     [HttpPut]

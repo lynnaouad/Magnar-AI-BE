@@ -1,6 +1,8 @@
-﻿using Magnar.AI.Application.Dto.Schema;
+﻿using Magnar.AI.Application.Dto.Providers;
+using Magnar.AI.Application.Dto.Schema;
 using Magnar.AI.Application.Features.DatabaseSchema.Commands;
 using Magnar.AI.Application.Features.DatabaseSchema.Queries;
+using Magnar.AI.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Threading;
@@ -15,10 +17,10 @@ public class DatabaseSchemaController : BaseController
     {
     }
 
-    [HttpGet("tables")]
-    public async Task<IActionResult> GetTables(CancellationToken cancellationToken)
+    [HttpPost("tables")]
+    public async Task<IActionResult> LoadTablesFromDatabase([FromBody] ProviderDto provider, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new GetTablesQuery(), cancellationToken);
+        var result = await Mediator.Send(new GetTablesQuery(provider), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -27,10 +29,10 @@ public class DatabaseSchemaController : BaseController
         return Ok(result.Value);
     }
 
-    [HttpGet("tables/{schemaName}/{tableName}")]
-    public async Task<IActionResult> GetTableInfo(string schemaName, string tableName, CancellationToken cancellationToken)
+    [HttpGet("selected")]
+    public async Task<IActionResult> LoadTablesFromFile(int providerId, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new GetTableInfoQuery(schemaName, tableName), cancellationToken);
+        var result = await Mediator.Send(new GetSelectedTablesQuery(HttpContext.GetWorkspaceId(), providerId), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -39,33 +41,15 @@ public class DatabaseSchemaController : BaseController
         return Ok(result.Value);
     }
 
-    /// <summary>
-    /// Add or update a table block
-    /// </summary>
     [HttpPost("annotate")]
-    public async Task<IActionResult> AnnotateSchema([FromBody]IEnumerable<TableAnnotationRequest> annotationRequest, CancellationToken cancellationToken)
+    public async Task<IActionResult> AnnotateSchema([FromBody]IEnumerable<TableDto> selectedTables, int providerId, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new AnnotateDatabaseSchemaCommand(annotationRequest), cancellationToken);
+        var result = await Mediator.Send(new AnnotateDatabaseSchemaCommand(selectedTables, HttpContext.GetWorkspaceId(), providerId), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
         }
 
         return Ok();
-    }
-
-    /// <summary>
-    /// Read all blocks as raw text for preview/edit
-    /// </summary>
-    [HttpGet("selected")]
-    public async Task<IActionResult> GetSelectedTable(CancellationToken cancellationToken) 
-    {
-        var result = await Mediator.Send(new GetSelectedTablesQuery(), cancellationToken);
-        if (!result.Success)
-        {
-            return BadRequest(result.Errors);
-        }
-
-        return Ok(result.Value);
     }
 }

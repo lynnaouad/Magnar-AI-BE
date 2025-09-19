@@ -237,7 +237,7 @@ namespace Magnar.AI.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Connection",
+                name: "Provider",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -253,9 +253,9 @@ namespace Magnar.AI.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Connection", x => x.Id);
+                    table.PrimaryKey("PK_Provider", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Connection_Workspace_WorkspaceId",
+                        name: "FK_Provider_Workspace_WorkspaceId",
                         column: x => x.WorkspaceId,
                         principalTable: "Workspace",
                         principalColumn: "Id",
@@ -263,8 +263,8 @@ namespace Magnar.AI.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Connection_WorkspaceId",
-                table: "Connection",
+                name: "IX_Provider_WorkspaceId",
+                table: "Provider",
                 column: "WorkspaceId");
 
             migrationBuilder.CreateIndex(
@@ -318,11 +318,11 @@ namespace Magnar.AI.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Connection");
-
-            migrationBuilder.DropTable(
                 name: "DataProtectionKeys",
                 schema: "idn");
+
+            migrationBuilder.DropTable(
+                name: "Provider");
 
             migrationBuilder.DropTable(
                 name: "RoleClaims",

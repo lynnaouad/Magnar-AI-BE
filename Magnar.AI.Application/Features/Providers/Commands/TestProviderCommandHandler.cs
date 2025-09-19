@@ -25,7 +25,7 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 return Result<bool>.CreateSuccess(false);
             }
 
-            if(request.Model.Provider == ProviderTypes.SqlServer && request.Model?.Details?.SqlServerConfiguration is not null)
+            if(request.Model.Type == ProviderTypes.SqlServer && request.Model?.Details?.SqlServerConfiguration is not null)
             {
                var sqlTestResult = await unitOfWork.ProviderRepository.TestSqlProviderAsync(request.Model.Details.SqlServerConfiguration, cancellationToken);
                

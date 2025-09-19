@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Magnar.AI.Infrastructure.Migrations
 {
     [DbContext(typeof(MagnarAIDbContext))]
-    [Migration("20250917115435_Initial")]
+    [Migration("20250918092305_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -205,7 +205,7 @@ namespace Magnar.AI.Infrastructure.Migrations
 
                     b.HasIndex("WorkspaceId");
 
-                    b.ToTable("Connection");
+                    b.ToTable("Provider");
                 });
 
             modelBuilder.Entity("Magnar.AI.Domain.Entities.Workspace", b =>

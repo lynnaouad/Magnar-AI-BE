@@ -9,5 +9,8 @@ public class DatabaseSchemaEmbedding : VectorStoreBase
     public string Name { get; set; } = string.Empty;
 
     [VectorStoreData]
+    public int WorkspaceId { get; set; }
+
+    [VectorStoreData]
     public int ConnectionId { get; set; }
 }

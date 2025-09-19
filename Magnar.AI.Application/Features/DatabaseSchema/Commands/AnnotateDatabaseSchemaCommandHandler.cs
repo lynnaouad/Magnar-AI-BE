@@ -4,18 +4,15 @@ using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Domain.Entities.Vectors;
 using Microsoft.Extensions.Options;
-using System.Linq;
-using System.Net.Mail;
-using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 {
-    public sealed record AnnotateDatabaseSchemaCommand(IEnumerable<TableAnnotationRequest> TableAnnotation) : IRequest<Result>;
+    public sealed record AnnotateDatabaseSchemaCommand(IEnumerable<TableDto> SelectedTables, int WorkspaceId, int ProviderId) : IRequest<Result>;
 
     public class AnnotateDatabaseSchemaCommandHandler : IRequestHandler<AnnotateDatabaseSchemaCommand, Result>
     {
         #region Members
-        private readonly IAnnotationFileManager annotationFileManager;
         private readonly IUnitOfWork unitOfWork;
         private ISchemaManager schemaManager;
         private IAIManager aiManager;
@@ -25,14 +22,12 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 
         #region Constructor
         public AnnotateDatabaseSchemaCommandHandler(
-            IAnnotationFileManager annotationFileManager,
             IUnitOfWork unitOfWork,
             IAIManager aiManager,
             IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore,
             IOptions<VectorConfiguration> vectoronfiguration,
             ISchemaManager schemaManager)
         {
-            this.annotationFileManager = annotationFileManager;
             this.unitOfWork = unitOfWork;
             this.schemaManager = schemaManager;
             this.aiManager = aiManager;
@@ -43,84 +38,36 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 
         public async Task<Result> Handle(AnnotateDatabaseSchemaCommand request, CancellationToken cancellationToken)
         {
-            var defaultConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x => x.Type == ProviderTypes.SqlServer, false, cancellationToken);
-            if(defaultConnection is null)
-            {
-                return Result.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
-            }
-
-            var requests = await HandleBulkSelectRequests(request.TableAnnotation, cancellationToken);
-
-            await annotationFileManager.AppendOrReplaceBlocksAsync(requests, defaultConnection.Id);
+            await schemaManager.UpsertFileAsync(request.SelectedTables, request.WorkspaceId, request.ProviderId, cancellationToken);
 
             if (!vectoronfiguration.EnableVectors)
             {
                 return Result.CreateSuccess();
             }
-           
-            var tables = await annotationFileManager.ReadAllBlocksAsync(defaultConnection.Id);
 
-            await StoreTablesInVectorStore(tables, requests, defaultConnection.Id, cancellationToken);
+            var allFileTables = await schemaManager.LoadFromFileAsync(request.WorkspaceId, request.ProviderId, cancellationToken);
+
+            await StoreTablesInVectorStore(allFileTables, request.SelectedTables, request.WorkspaceId, request.ProviderId, cancellationToken);
 
             return Result.CreateSuccess();
         }
 
         #region Private Methods
 
-        // In Bulk select the table info are not retrieved only the table name
-        // This method maps the table with its columns in case of bulk select
-        private async Task<IEnumerable<TableAnnotationRequest>> HandleBulkSelectRequests(IEnumerable<TableAnnotationRequest> requests, CancellationToken cancellationToken)
-        {
-            var enrichedRequests = new List<TableAnnotationRequest>();
-
-            foreach (var req in requests)
-            {
-                // Parse schema and table name from fullName
-                var m = Regex.Match(req.FullTableName, @"\[(?<schema>[^\]]+)\]\.\[(?<table>[^\]]+)\]");
-                if (!m.Success)
-                {
-                    continue;
-                }
-
-                var schema = m.Groups["schema"].Value;
-                var table = m.Groups["table"].Value;
-
-                // Retrieve table info from SchemaManager
-                var tableInfoResult = await schemaManager.GetTableInfoAsync(schema, table, cancellationToken);
-                if (!tableInfoResult.Success)
-                {
-                    continue;
-                }
-
-                var tableInfo = tableInfoResult.Value;
-
-                // If no columns in request, fill them from DB
-                var colComments = req.ColumnComments?.Any() == true
-                    ? req.ColumnComments
-                    : tableInfo.Columns.ToDictionary(c => c.ColumnName, _ => (string?)string.Empty);
-
-                enrichedRequests.Add(new TableAnnotationRequest
-                {
-                    FullTableName = req.FullTableName,
-                    TableDescription = req.TableDescription,
-                    ColumnComments = colComments
-                });
-            }
-
-            return enrichedRequests;
-        }
-
-        private async Task StoreTablesInVectorStore(IEnumerable<SelectedTableBlock> allTables, IEnumerable<TableAnnotationRequest> requestedTables, int connectionId, CancellationToken cancellationToken)
+        private async Task StoreTablesInVectorStore(IEnumerable<TableDto> allTables, IEnumerable<TableDto> requestedTables, int workspaceId, int connectionId, CancellationToken cancellationToken)
         {
             List<DatabaseSchemaEmbedding> embeddings = [];
 
+            var requestedKeys = new HashSet<string>(requestedTables.Select(t => t.FullName), StringComparer.OrdinalIgnoreCase);
+
             // Set of tables we want to persist
-            var tables = allTables.Where(t => requestedTables.Select(x => x.FullTableName).Contains(t.FullTableName));
+            var tables = allTables.Where(t => requestedKeys.Contains(t.FullName)).ToList();
 
             // Generate embeddings for the current tables
             var tasks = tables.Select(async table =>
             {
-                var response = await aiManager.GenerateEmbeddingAsync(table.RawBlockText, cancellationToken);
+                var serializedText = JsonSerializer.Serialize(table);
+                var response = await aiManager.GenerateEmbeddingAsync(serializedText, cancellationToken);
                 if (response is null)
                 {
                     return null;
@@ -128,8 +75,9 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 
                 return new DatabaseSchemaEmbedding
                 {
-                    Id = $"{table.FullTableName}_{connectionId}",
-                    Name = table.FullTableName,
+                    Id = $"{table.FullName}_{connectionId}",
+                    Name = table.FullName,
+                    WorkspaceId = workspaceId,
                     ConnectionId = connectionId,
                     ChunckIndex = response.Index,
                     Text = response.Text,
@@ -149,7 +97,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             var existingIdsInStore = await vectorStore.ListIdsAsync(filters, cancellationToken);
 
             // Determine obsolete embeddings (tables deleted from file)
-            var currentIds = allTables.Select(e => e.FullTableName + "_" + connectionId).ToHashSet();
+            var currentIds = allTables.Select(e => e.FullName + "_" + connectionId).ToHashSet();
             var toDelete = existingIdsInStore.Except(currentIds);
 
             foreach (var id in toDelete)
