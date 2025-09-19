@@ -27,15 +27,41 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 request.Model.Details.SqlServerConfiguration.Password = unitOfWork.ProviderRepository.ProtectPassword(request.Model.Details.SqlServerConfiguration.Password);
             }
 
-            var provider = mapper.Map<Provider>(request.Model);
+            request.Model.WorkspaceId = request.WorkspaceId;
 
-            provider.WorkspaceId = request.WorkspaceId;
+            var provider = mapper.Map<Provider>(request.Model);
 
             await unitOfWork.ProviderRepository.CreateAsync(provider, cancellationToken);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
+            if(provider.Type == ProviderTypes.API && request.Model?.Details?.ApiProviderDetails is not null && request.Model.Details.ApiProviderDetails.Any())
+            {
+                await AddApisDetails(request.Model.Details.ApiProviderDetails, request.WorkspaceId, provider.Id, provider.Name, cancellationToken);
+            }
+
             return Result<int>.CreateSuccess(provider.Id);
         }
+
+        #region Private Methods
+
+        public async Task AddApisDetails(IEnumerable<ApiProviderDetailsDto> apis, int workspaceId, int providerId, string providerName, CancellationToken cancellationToken)
+        {
+            apis = apis.Select(x =>
+            {
+                x.ProviderId = providerId;
+                x.PluginName = $"{providerName}_{workspaceId}_{providerId}";
+
+                return x;
+            });
+
+            var mapped = mapper.Map<IEnumerable<ApiProviderDetails>>(apis);
+
+            await unitOfWork.ProviderRepository.ApiProviderDetailsRepository.CreateAsync(mapped, cancellationToken);
+
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        #endregion
     }
 }

@@ -24,4 +24,29 @@ public enum DashboardTypes
 public enum ProviderTypes
 {
     SqlServer = 1,
+    API
+}
+
+public enum ApiParameterLocation
+{
+    Query = 1,
+    Route
+}
+
+public enum ApiParameterDataType
+{
+    String = 1,
+    Number, 
+    Boolean,  
+    DateTime,
+    Object,
+    Array
+}
+
+public enum HttpMethods
+{
+    GET = 1,
+    POST,
+    PUT,
+    DELETE
 }

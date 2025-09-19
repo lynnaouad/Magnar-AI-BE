@@ -7,6 +7,8 @@ namespace Magnar.AI.Application.Interfaces.Infrastructure;
 
 public interface IMagnarAIDbContext
 {
+    DbSet<ApiProviderDetails> ApiProviderDetails { get; }
+
     DbSet<PersistedGrant> UserGrants { get; }
 
     DbSet<DataProtectionKey> DataProtectionKeys { get; }

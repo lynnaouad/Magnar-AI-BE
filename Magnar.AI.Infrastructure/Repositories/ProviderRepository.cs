@@ -12,31 +12,58 @@ namespace Magnar.AI.Infrastructure.Repositories;
 public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
 {
     #region Members
-    private readonly DbSet<Provider> context;
+    private readonly MagnarAIDbContext context;
     private readonly IMapper mapper;
     private readonly IDataProtector protector;
+    private IRepository<ApiProviderDetails> apiProviderDetailsRepository;
     #endregion
 
     #region Constructor
-    public ProviderRepository(MagnarAIDbContext context, IMapper mapper, IDataProtectionProvider dataProtectorProvider) : base(context)
+    public ProviderRepository(MagnarAIDbContext context, IMapper mapper, IDataProtectionProvider dataProtectorProvider, IRepository<ApiProviderDetails> apiProviderDetailsRepository) : base(context)
     {
-        this.context = context.Set<Provider>();
+        this.context = context;
         this.mapper = mapper;
         protector = dataProtectorProvider.CreateProtector(Constants.DataProtector.Purpose);
+        this.apiProviderDetailsRepository = apiProviderDetailsRepository;
     }
     #endregion
 
+    public IRepository<ApiProviderDetails> ApiProviderDetailsRepository => apiProviderDetailsRepository;
+
     public async Task<ProviderDto> GetProviderAsync(int id, CancellationToken cancellationToken)
     {
-        var connection = await context.FirstOrDefaultAsync(x => x.Id == id, cancellationToken: cancellationToken);
-        if (connection is null || string.IsNullOrEmpty(connection.Details))
+        var provider = await context.Set<Provider>().FirstOrDefaultAsync(x => x.Id == id, cancellationToken: cancellationToken);
+        if (provider is null || string.IsNullOrEmpty(provider.Details))
         {
             return null;
         }
 
-        var mappedProvider = mapper.Map<ProviderDto>(connection);
+        var mappedProvider = mapper.Map<ProviderDto>(provider);
 
-        return HandlePasswords(mappedProvider);
+        switch (provider.Type) 
+        {
+            case ProviderTypes.SqlServer:
+                {
+                    if(mappedProvider.Details?.SqlServerConfiguration is not null)
+                    {
+                        mappedProvider.Details.SqlServerConfiguration.Password = UnprotectPassword(mappedProvider.Details.SqlServerConfiguration.Password);
+                    }
+
+                    break;
+                }
+
+            case ProviderTypes.API:
+                {
+                    var apiDetails = context.Set<ApiProviderDetails>().Where(x => x.ProviderId == provider.Id);
+
+                    mappedProvider.Details.ApiProviderDetails = mapper.Map<IEnumerable<ApiProviderDetailsDto>>(apiDetails);
+                    break;
+                }
+
+            default: break;
+        }
+
+        return mappedProvider;
     }
 
     public async Task<bool> TestSqlProviderAsync(SqlServerProviderDetailsDto details, CancellationToken cancellationToken)
@@ -67,8 +94,6 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
 
         var mappedProviders = mapper.Map<IEnumerable<ProviderDto>>(result.Value);
 
-        mappedProviders = mappedProviders.Select(HandlePasswords);
-
         return new OdataResponse<ProviderDto>
         {
             TotalCount = result.TotalCount,
@@ -97,6 +122,18 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
         return builder.ConnectionString;
     }
 
+    public async Task DeleteApiDetailsAsync(int providerId, CancellationToken cancellationToken)
+    {
+        var existing = await context.Set<ApiProviderDetails>()
+            .Where(x => x.ProviderId == providerId)
+            .ToListAsync(cancellationToken);
+
+        if (existing.Count != 0)
+        {
+            context.Set<ApiProviderDetails>().RemoveRange(existing);
+        }
+    }
+
     public string ProtectPassword(string password)
     {
         return protector.Protect(password);
@@ -108,14 +145,6 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
     }
 
     #region Private Methods
-    private ProviderDto HandlePasswords(ProviderDto connection)
-    {
-        if (connection.Type == ProviderTypes.SqlServer && connection.Details?.SqlServerConfiguration is not null)
-        {
-            connection.Details.SqlServerConfiguration.Password = UnprotectPassword(connection.Details.SqlServerConfiguration.Password);
-        }
 
-        return connection;
-    }
     #endregion
 }

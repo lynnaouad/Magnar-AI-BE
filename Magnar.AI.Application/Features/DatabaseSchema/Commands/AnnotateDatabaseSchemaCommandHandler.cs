@@ -78,7 +78,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
                     Id = $"{table.FullName}_{connectionId}",
                     Name = table.FullName,
                     WorkspaceId = workspaceId,
-                    ConnectionId = connectionId,
+                    ProviderId = connectionId,
                     ChunckIndex = response.Index,
                     Text = response.Text,
                     Embedding = response.Embedding,
@@ -90,7 +90,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 
             var filters = new Dictionary<string, object>
             {
-                { nameof(DatabaseSchemaEmbedding.ConnectionId), connectionId.ToString() ?? string.Empty },
+                { nameof(DatabaseSchemaEmbedding.ProviderId), connectionId.ToString() ?? string.Empty },
             };
 
             // Get all existing embeddings for this connection

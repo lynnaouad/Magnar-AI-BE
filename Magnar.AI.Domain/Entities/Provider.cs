@@ -22,5 +22,7 @@ namespace Magnar.AI.Domain.Entities
         public string CreatedBy { get; set; } = string.Empty;
         
         public string? LastModifiedBy { get; set; }
+
+        public ICollection<ApiProviderDetails> ApiProviderDetails { get; set; } = [];
     }
 }

@@ -63,6 +63,62 @@ namespace Magnar.AI.Infrastructure.Migrations
                     b.ToTable("UserGrants");
                 });
 
+            modelBuilder.Entity("Magnar.AI.Domain.Entities.ApiProviderDetails", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApiUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FunctionName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("HttpMethod")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ParametersJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PluginName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProviderId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("ApiProviderDetails");
+                });
+
             modelBuilder.Entity("Magnar.AI.Domain.Entities.ApplicationUser", b =>
                 {
                     b.Property<int>("Id")
@@ -394,6 +450,17 @@ namespace Magnar.AI.Infrastructure.Migrations
                     b.ToTable("UserTokens", "idn");
                 });
 
+            modelBuilder.Entity("Magnar.AI.Domain.Entities.ApiProviderDetails", b =>
+                {
+                    b.HasOne("Magnar.AI.Domain.Entities.Provider", "Provider")
+                        .WithMany("ApiProviderDetails")
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
             modelBuilder.Entity("Magnar.AI.Domain.Entities.Provider", b =>
                 {
                     b.HasOne("Magnar.AI.Domain.Entities.Workspace", "Workspace")
@@ -454,6 +521,11 @@ namespace Magnar.AI.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Magnar.AI.Domain.Entities.Provider", b =>
+                {
+                    b.Navigation("ApiProviderDetails");
                 });
 #pragma warning restore 612, 618
         }

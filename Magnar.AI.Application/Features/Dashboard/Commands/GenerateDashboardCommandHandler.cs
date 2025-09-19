@@ -54,7 +54,7 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
         var defaultConnection = mapper.Map<ProviderDto>(sqlConnection);
 
         // Perform vector search to retrieve tables schema
-        var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ConnectionId == defaultConnection.Id };
+        var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ProviderId == defaultConnection.Id };
 
         VectorSearchResponse<DatabaseSchemaEmbedding> response = await vectorStore.VectorSearchAsync(request.parameters.Prompt, 10, options, cancellationToken);
         if (!response.Success || response.SearchResults is null || !response.SearchResults.Any())

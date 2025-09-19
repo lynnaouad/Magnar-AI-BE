@@ -31,9 +31,34 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
             unitOfWork.ProviderRepository.Update(mapper.Map<Provider>(request.Model));
 
+            if (request.Model.Type == ProviderTypes.API &&
+                request.Model?.Details?.ApiProviderDetails is not null)
+            {
+                await UpdateApisDetails(request.Model.Details.ApiProviderDetails, request.Model.WorkspaceId, request.Model.Id, request.Model.Name, cancellationToken);
+            }
+
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result.CreateSuccess();
         }
+
+        #region Private Methods
+
+        private async Task UpdateApisDetails(IEnumerable<ApiProviderDetailsDto> apis, int workspaceId, int providerId, string providerName, CancellationToken cancellationToken)
+        {
+            apis = apis.Select(x =>
+            {
+                x.ProviderId = providerId;
+                x.PluginName = $"{providerName}_{workspaceId}_{providerId}";
+                return x;
+            });
+
+            var mapped = mapper.Map<IEnumerable<ApiProviderDetails>>(apis);
+
+            await unitOfWork.ProviderRepository.DeleteApiDetailsAsync(providerId, cancellationToken);
+            await unitOfWork.ProviderRepository.ApiProviderDetailsRepository.CreateAsync(mapped, cancellationToken);
+        }
+
+        #endregion
     }
 }

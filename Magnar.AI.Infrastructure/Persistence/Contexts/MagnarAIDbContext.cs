@@ -20,6 +20,8 @@ public class MagnarAIDbContext : IdentityDbContext<ApplicationUser, IdentityRole
         this.auditableEntityInterceptor = auditableEntityInterceptor;
     }
 
+    public DbSet<ApiProviderDetails> ApiProviderDetails => Set<ApiProviderDetails>();
+
     public DbSet<PersistedGrant> UserGrants => Set<PersistedGrant>();
 
     public DbSet<Provider> Provider => Set<Provider>();

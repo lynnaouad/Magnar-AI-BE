@@ -262,6 +262,41 @@ namespace Magnar.AI.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ApiProviderDetails",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ProviderId = table.Column<int>(type: "int", nullable: false),
+                    PluginName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FunctionName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ApiUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    HttpMethod = table.Column<int>(type: "int", nullable: false),
+                    Payload = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ParametersJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApiProviderDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ApiProviderDetails_Provider_ProviderId",
+                        column: x => x.ProviderId,
+                        principalTable: "Provider",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApiProviderDetails_ProviderId",
+                table: "ApiProviderDetails",
+                column: "ProviderId");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Provider_WorkspaceId",
                 table: "Provider",
@@ -318,11 +353,11 @@ namespace Magnar.AI.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "DataProtectionKeys",
-                schema: "idn");
+                name: "ApiProviderDetails");
 
             migrationBuilder.DropTable(
-                name: "Provider");
+                name: "DataProtectionKeys",
+                schema: "idn");
 
             migrationBuilder.DropTable(
                 name: "RoleClaims",
@@ -348,7 +383,7 @@ namespace Magnar.AI.Infrastructure.Migrations
                 schema: "idn");
 
             migrationBuilder.DropTable(
-                name: "Workspace");
+                name: "Provider");
 
             migrationBuilder.DropTable(
                 name: "Roles",
@@ -357,6 +392,9 @@ namespace Magnar.AI.Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "Users",
                 schema: "idn");
+
+            migrationBuilder.DropTable(
+                name: "Workspace");
         }
     }
 }

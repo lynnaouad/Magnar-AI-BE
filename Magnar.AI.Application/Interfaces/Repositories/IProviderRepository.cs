@@ -6,6 +6,9 @@ namespace Magnar.AI.Application.Interfaces.Repositories;
 
 public interface IProviderRepository : IRepository<Provider>
 {
+
+    IRepository<ApiProviderDetails> ApiProviderDetailsRepository { get; }
+
     Task<bool> TestSqlProviderAsync(SqlServerProviderDetailsDto details, CancellationToken cancellationToken);
 
     string BuildSqlServerConnectionString(SqlServerProviderDetailsDto details);
@@ -17,4 +20,6 @@ public interface IProviderRepository : IRepository<Provider>
     Task<ProviderDto> GetProviderAsync(int id, CancellationToken cancellationToken);
 
     Task<OdataResponse<ProviderDto>> GetProvidersOdataAsync(ODataQueryOptions<Provider> filterOptions, CancellationToken cancellationToken);
+
+    Task DeleteApiDetailsAsync(int providerId, CancellationToken cancellationToken);
 }
