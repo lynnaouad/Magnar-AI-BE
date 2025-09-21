@@ -35,6 +35,37 @@ public class UpdateProviderCommandValidator : AbstractValidator<UpdateProviderCo
             })
             .WithMessage(Constants.ValidationMessages.RequiredField);
 
+        RuleFor(x => x.Model)
+            .Must(provider =>
+            {
+                if (provider.Type != ProviderTypes.API || provider.ApiProviderDetails == null || !provider.ApiProviderDetails.Any())
+                {
+                    return true;
+                }
+
+                if (provider.ApiProviderDetails.Count() != provider.ApiProviderDetails.DistinctBy(x => x.FunctionName).Count())
+                {
+                    return false;
+                }
+
+                return true;
+            })
+            .WithMessage(Constants.ValidationMessages.FunctionNameExist);
+
+        RuleForEach(x => x.Model.ApiProviderDetails)
+            .Must(api =>
+            {
+                if (string.IsNullOrWhiteSpace(api.FunctionName))
+                    return false;
+
+                // only ASCII letters, digits, underscores
+                return System.Text.RegularExpressions.Regex.IsMatch(api.FunctionName, "^[a-zA-Z0-9_]+$");
+            })
+            .WithMessage(Constants.ValidationMessages.FunctionNameFormat)
+            .When(x => x.Model.Type == ProviderTypes.API
+                    && x.Model.ApiProviderDetails != null
+                    && x.Model.ApiProviderDetails.Any());
+
         return base.ValidateAsync(context, cancellation);
     }
 }

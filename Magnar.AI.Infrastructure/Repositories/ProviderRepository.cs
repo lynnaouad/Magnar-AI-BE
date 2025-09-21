@@ -56,7 +56,7 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
                 {
                     var apiDetails = context.Set<ApiProviderDetails>().Where(x => x.ProviderId == provider.Id);
 
-                    mappedProvider.Details.ApiProviderDetails = mapper.Map<IEnumerable<ApiProviderDetailsDto>>(apiDetails);
+                    mappedProvider.ApiProviderDetails = mapper.Map<IEnumerable<ApiProviderDetailsDto>>(apiDetails);
                     break;
                 }
 

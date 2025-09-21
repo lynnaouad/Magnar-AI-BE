@@ -36,11 +36,16 @@ public enum ApiParameterLocation
 public enum ApiParameterDataType
 {
     String = 1,
-    Number, 
+    Integer, 
+    Double,
+    Float,
+    Decimal,
     Boolean,  
     DateTime,
-    Object,
-    Array
+    DateTimeOffset,
+    Guid,
+    Enum,
+    Array,
 }
 
 public enum HttpMethods
@@ -48,5 +53,13 @@ public enum HttpMethods
     GET = 1,
     POST,
     PUT,
+    PATCH,
     DELETE
+}
+
+public enum AuthType 
+{
+    None = 1,
+    PasswordCredentials,
+    ClientCredentials
 }

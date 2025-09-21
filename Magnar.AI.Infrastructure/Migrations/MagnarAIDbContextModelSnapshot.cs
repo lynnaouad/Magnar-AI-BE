@@ -88,7 +88,7 @@ namespace Magnar.AI.Infrastructure.Migrations
 
                     b.Property<string>("FunctionName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("HttpMethod")
                         .HasColumnType("int");
@@ -114,7 +114,8 @@ namespace Magnar.AI.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProviderId");
+                    b.HasIndex("ProviderId", "FunctionName")
+                        .IsUnique();
 
                     b.ToTable("ApiProviderDetails");
                 });

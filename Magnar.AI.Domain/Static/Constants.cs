@@ -63,6 +63,8 @@ public static class Constants
         public const string DistPath = "ClientApp/dist";
 
         public const string RootPath = "ClientApp";
+
+        public const string ClientIndexFileName = "index.html";
     }
 
     public readonly struct RouteParameters
@@ -123,6 +125,8 @@ public static class Constants
         public const string PromptRequired = "ValidationMessages.PromptRequired";
         public const string MaxTop10 = "ValidationMessages.MaxTop10";
         public const string CannotHaveMultipleDefaultConnections = "ValidationMessages.CannotHaveMultipleDefaultConnections";
+        public const string FunctionNameExist = "ValidationMessages.FunctionNameExist";
+        public const string FunctionNameFormat = "ValidationMessages.FunctionNameFormat";
 
         public static class Identity
         {
@@ -241,6 +245,7 @@ public static class Constants
                 public static class GrantTypes
                 {
                     public const string Password = "password";
+                    public const string ClientCredentials = "client_credentials";
                     public const string RefreshToken = "refresh_token";
                 }
             }

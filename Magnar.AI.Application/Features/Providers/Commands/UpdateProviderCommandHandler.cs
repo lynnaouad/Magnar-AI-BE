@@ -10,13 +10,15 @@ namespace Magnar.AI.Application.Features.Providers.Commands
         #region Members
         private readonly IUnitOfWork unitOfWork;
         private readonly IMapper mapper;
+        private readonly IApiProviderService apiProviderService;
         #endregion
 
         #region Constructor
-        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IApiProviderService apiProviderService)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
+            this.apiProviderService = apiProviderService;
         }
         #endregion
 
@@ -29,36 +31,45 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 request.Model.Details.SqlServerConfiguration.Password = protectedPassword;
             }
 
-            unitOfWork.ProviderRepository.Update(mapper.Map<Provider>(request.Model));
+            var provider = mapper.Map<Provider>(request.Model);
 
-            if (request.Model.Type == ProviderTypes.API &&
-                request.Model?.Details?.ApiProviderDetails is not null)
+            if (provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Any())
             {
-                await UpdateApisDetails(request.Model.Details.ApiProviderDetails, request.Model.WorkspaceId, request.Model.Id, request.Model.Name, cancellationToken);
+                provider.ApiProviderDetails = [.. provider.ApiProviderDetails.Select(x =>
+                {
+                    x.ProviderId = provider.Id;
+                    x.PluginName = $"DynamicPlugin_{provider.WorkspaceId}_{provider.Id}";
+
+                    return x;
+                })];
             }
 
+            unitOfWork.ProviderRepository.Update(provider);
+
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            UpdateRegisteredKernelApis(provider);
 
             return Result.CreateSuccess();
         }
 
         #region Private Methods
 
-        private async Task UpdateApisDetails(IEnumerable<ApiProviderDetailsDto> apis, int workspaceId, int providerId, string providerName, CancellationToken cancellationToken)
+        private void UpdateRegisteredKernelApis(Provider provider)
         {
-            apis = apis.Select(x =>
+            if (provider.Type != ProviderTypes.API || provider.ApiProviderDetails is null)
             {
-                x.ProviderId = providerId;
-                x.PluginName = $"{providerName}_{workspaceId}_{providerId}";
-                return x;
-            });
+                return;
+            }
 
-            var mapped = mapper.Map<IEnumerable<ApiProviderDetails>>(apis);
+            var mapped = mapper.Map<ProviderDto>(provider);
+            if (mapped.Details?.ApiProviderAuthDetails is null)
+            {
+                return;
+            }
 
-            await unitOfWork.ProviderRepository.DeleteApiDetailsAsync(providerId, cancellationToken);
-            await unitOfWork.ProviderRepository.ApiProviderDetailsRepository.CreateAsync(mapped, cancellationToken);
+            apiProviderService.RegisterApis(provider.WorkspaceId, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
         }
-
         #endregion
     }
 }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Magnar.AI.Infrastructure.Migrations
 {
     [DbContext(typeof(MagnarAIDbContext))]
-    [Migration("20250919104744_Initial")]
+    [Migration("20250921183333_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -91,7 +91,7 @@ namespace Magnar.AI.Infrastructure.Migrations
 
                     b.Property<string>("FunctionName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("HttpMethod")
                         .HasColumnType("int");
@@ -117,7 +117,8 @@ namespace Magnar.AI.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProviderId");
+                    b.HasIndex("ProviderId", "FunctionName")
+                        .IsUnique();
 
                     b.ToTable("ApiProviderDetails");
                 });

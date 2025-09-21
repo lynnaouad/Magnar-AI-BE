@@ -1,11 +1,12 @@
 ﻿using Magnar.AI.Application.Dto.Dashboard;
 using Magnar.AI.Controllers;
 using Magnar.Recruitment.Application.Features.Dashboard.Commands;
+using Microsoft.AspNetCore.Authorization;
 using System.Threading;
 using System.Threading.Tasks;
 
+[Authorize]
 [ApiController]
-[Route("api/custom-dashboard")]
 public class CustomDashboardController : BaseController
 {
     public CustomDashboardController(IMediator mediator) : base(mediator)

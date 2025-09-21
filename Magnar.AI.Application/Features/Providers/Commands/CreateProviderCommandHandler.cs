@@ -8,15 +8,17 @@ namespace Magnar.AI.Application.Features.Providers.Commands
     public class CreateProviderCommandHandler : IRequestHandler<CreateProviderCommand, Result<int>>
     {
         #region Members
+        private readonly IApiProviderService apiProviderService;
         private readonly IUnitOfWork unitOfWork;
         private readonly IMapper mapper;
         #endregion
 
         #region Constructor
-        public CreateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+        public CreateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IApiProviderService apiProviderService)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
+            this.apiProviderService = apiProviderService;
         }
         #endregion
 
@@ -31,35 +33,42 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
             var provider = mapper.Map<Provider>(request.Model);
 
+            if(provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Any())
+            {
+                provider.ApiProviderDetails = [.. provider.ApiProviderDetails.Select(x =>
+                {
+                    x.ProviderId = provider.Id;
+                    x.PluginName = $"DynamicPlugin_{provider.WorkspaceId}_{provider.Id}";
+
+                    return x;
+                })];
+            }
+
             await unitOfWork.ProviderRepository.CreateAsync(provider, cancellationToken);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
-            if(provider.Type == ProviderTypes.API && request.Model?.Details?.ApiProviderDetails is not null && request.Model.Details.ApiProviderDetails.Any())
-            {
-                await AddApisDetails(request.Model.Details.ApiProviderDetails, request.WorkspaceId, provider.Id, provider.Name, cancellationToken);
-            }
+            RegisterKernelApis(provider);
 
             return Result<int>.CreateSuccess(provider.Id);
         }
 
         #region Private Methods
 
-        public async Task AddApisDetails(IEnumerable<ApiProviderDetailsDto> apis, int workspaceId, int providerId, string providerName, CancellationToken cancellationToken)
+        public void RegisterKernelApis(Provider provider)
         {
-            apis = apis.Select(x =>
+            if(provider.Type != ProviderTypes.API || provider.ApiProviderDetails is null)
             {
-                x.ProviderId = providerId;
-                x.PluginName = $"{providerName}_{workspaceId}_{providerId}";
+                return;
+            }
 
-                return x;
-            });
+            var mapped = mapper.Map<ProviderDto>(provider);
+            if (mapped.Details?.ApiProviderAuthDetails is null)
+            {
+                return;
+            }
 
-            var mapped = mapper.Map<IEnumerable<ApiProviderDetails>>(apis);
-
-            await unitOfWork.ProviderRepository.ApiProviderDetailsRepository.CreateAsync(mapped, cancellationToken);
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            apiProviderService.RegisterApis(provider.WorkspaceId, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
         }
 
         #endregion

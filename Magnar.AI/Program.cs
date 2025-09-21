@@ -1,9 +1,17 @@
-﻿using DevExpress.AspNetCore;
+﻿using AutoMapper;
+using DevExpress.AspNetCore;
 using DevExpress.DashboardAspNetCore;
 using DevExpress.DashboardWeb;
 using Magnar.AI;
 using Magnar.AI.Application;
 using Magnar.AI.Application.Dashboards;
+using Magnar.AI.Application.Dto.Providers;
+using Magnar.AI.Application.Interfaces.Repositories;
+using Magnar.AI.Application.Interfaces.Services;
+using Magnar.AI.Application.Kernel;
+using Magnar.AI.Application.Services;
+using Magnar.AI.Domain.Entities;
+using Magnar.AI.Domain.Static;
 using Magnar.AI.Extensions;
 using Magnar.AI.Infrastructure.Extensions;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
@@ -17,6 +25,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.SemanticKernel;
 using Serilog;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 public partial class Program
@@ -24,6 +33,8 @@ public partial class Program
     private static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.AddHttpClient();
 
         // Semantic Kernel + OpenAI
         var openAIConf = builder.Configuration.GetSection("OpenAIConfiguration");
@@ -55,6 +66,9 @@ public partial class Program
 
         builder.Services.AddWebServices(builder.Configuration, builder.Environment, builder.Host);
 
+        builder.Services.AddSingleton<WorkspacePluginManager>();
+        builder.Services.AddScoped<IApiProviderService, ApiProviderService>();
+
         // Register DevExpress dashboard services
         builder.Services.AddSingleton<UserScopedDashboardStorage>();
 
@@ -80,6 +94,38 @@ public partial class Program
         });
 
         WebApplication app = builder.Build();
+
+        // On startup, rebuild all workspace kernels
+        using (var scope = app.Services.CreateScope())
+        {
+            var manager = scope.ServiceProvider.GetRequiredService<WorkspacePluginManager>();
+            var providerRepository = scope.ServiceProvider.GetRequiredService<IProviderRepository>();
+            var workspaceRepository = scope.ServiceProvider.GetRequiredService<IRepository<Workspace>>();
+            var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
+
+            var workspaces = await workspaceRepository.GetAsync();
+            var workspacesIds = workspaces.Select(x => x.Id);
+
+            foreach(var workspaceId in workspacesIds)
+            {
+                var providers = await providerRepository.WhereAsync(x => x.WorkspaceId == workspaceId && x.Type == ProviderTypes.API, false, default);
+
+                foreach(var provider in providers)
+                {
+                    var mapped = mapper.Map<ProviderDto>(provider);
+                    var functions = await providerRepository.ApiProviderDetailsRepository.WhereAsync(x => x.ProviderId == provider.Id, false, default);
+
+                    if (mapped.Details?.ApiProviderAuthDetails is null)
+                    {
+                        continue;
+                    }
+                   
+                    manager.RebuildKernel(workspaceId, functions, mapped.Details.ApiProviderAuthDetails);
+                }
+
+                var test = manager.GetFunctionsWithDetails(workspaceId);
+            }
+        }
 
         /*
          *

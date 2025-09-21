@@ -21,6 +21,8 @@ namespace Magnar.AI.Application.Dto.Providers
         public string CreatedBy { get; set; } = string.Empty;
 
         public string? LastModifiedBy { get; set; }
+
+        public IEnumerable<ApiProviderDetailsDto> ApiProviderDetails { get; set; } = [];
     }
 
     public class Mapping : Profile

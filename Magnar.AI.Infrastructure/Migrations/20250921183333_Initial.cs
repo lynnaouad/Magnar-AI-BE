@@ -270,7 +270,7 @@ namespace Magnar.AI.Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProviderId = table.Column<int>(type: "int", nullable: false),
                     PluginName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FunctionName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FunctionName = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ApiUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     HttpMethod = table.Column<int>(type: "int", nullable: false),
@@ -293,9 +293,10 @@ namespace Magnar.AI.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ApiProviderDetails_ProviderId",
+                name: "IX_ApiProviderDetails_ProviderId_FunctionName",
                 table: "ApiProviderDetails",
-                column: "ProviderId");
+                columns: new[] { "ProviderId", "FunctionName" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Provider_WorkspaceId",

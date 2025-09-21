@@ -7,6 +7,10 @@ namespace Magnar.AI.Infrastructure.Configurations
         public void Configure(EntityTypeBuilder<ApiProviderDetails> builder)
         {
             builder.HasOne(x => x.Provider).WithMany(x => x.ApiProviderDetails).HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasIndex(p => new { p.ProviderId, p.FunctionName }).IsUnique();
+
+            builder.Property(p => p.FunctionName).IsRequired();
         }
     }
 }
