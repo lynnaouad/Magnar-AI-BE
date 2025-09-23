@@ -10,12 +10,17 @@ namespace Magnar.AI.Application.Managers
 {
     public class DashboardManager : IDashboardManager
     {
+        #region Members
         public readonly UserScopedDashboardStorage dashboardStorage;
+        #endregion
 
+
+        #region Constructor
         public DashboardManager(UserScopedDashboardStorage dashboardStorage)
         {
             this.dashboardStorage = dashboardStorage;
         }
+        #endregion
 
         public Dashboard CreateDashboard(SqlServerProviderDetailsDto defaultConnection, string sqlQuery, DashboardTypes dashboardType, IEnumerable<string>? columns = null)
         {
@@ -157,24 +162,38 @@ namespace Magnar.AI.Application.Managers
             dashboard.LayoutRoot = root;
         }
 
-        public void RemoveAllForCurrentUser()
+        public void RemoveAllForCurrentUser(int workspaceId)
         {
-            dashboardStorage.RemoveAllForCurrentUser();
+            dashboardStorage.RemoveAllForCurrentUser(workspaceId);
         }
 
-        public void SaveDashboard(string dashboardId, XDocument xdoc)
+        public string SaveDashboard(string fullkey, XDocument xdoc)
         {
-            dashboardStorage.SaveDashboard(dashboardId, xdoc);
+            dashboardStorage.SaveDashboard(fullkey, xdoc);
+            return fullkey;
         }
 
-        public string GetLastDashboardKey()
+        public string SaveDashboard(int workspaceId, string username, string dashboardId, XDocument xdoc)
         {
-            return dashboardStorage.GetLastDashboardKey();
+            var fullKey = GetFullKey(workspaceId, username, dashboardId);
+            return SaveDashboard(fullKey, xdoc);
         }
 
-        public XDocument LoadDashboard(string dashboardID)
+        public XDocument LoadDashboard(string fullKey)
         {
-            return dashboardStorage.LoadDashboard(dashboardID);
+            return dashboardStorage.LoadDashboard(fullKey);
         }
+
+        public string GetLastDashboardKey(int workspaceId)
+        {
+            return dashboardStorage.GetLastDashboardKey(workspaceId);
+        }
+
+        #region Private Methods
+        private string GetFullKey(int workspaceId, string username, string dashboardID)
+        {
+            return $"{workspaceId}_{username}_{dashboardID}";
+        }
+        #endregion
     }
 }

@@ -5,29 +5,40 @@ using Magnar.AI.Application.Interfaces.Managers;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
-public sealed record ChangeDashboardTypeCommand(DashboardPromptDto parameters) : IRequest<Result<string>>;
+public sealed record ChangeDashboardTypeCommand(DashboardPromptDto Parameters) : IRequest<Result<string>>;
 
 public class ChangeDashboardTypeCommandHandler : IRequestHandler<ChangeDashboardTypeCommand, Result<string>>
 {
     #region Members
     private readonly IDashboardManager dashboardManager;
     private readonly IUnitOfWork unitOfWork;
+    private readonly ICurrentUserService currentUserService;
     #endregion
 
     #region Constructor
 
-   public ChangeDashboardTypeCommandHandler(
+    public ChangeDashboardTypeCommandHandler(
         IDashboardManager dashboardManager,
+        ICurrentUserService currentUserService,
         IUnitOfWork unitOfWork)
     {
         this.dashboardManager = dashboardManager;
         this.unitOfWork = unitOfWork;
+        this.currentUserService = currentUserService;
     }
     #endregion
 
     public async Task<Result<string>> Handle(ChangeDashboardTypeCommand request, CancellationToken cancellationToken)
     {
-        var dashboardId = dashboardManager.GetLastDashboardKey();
+        var username = currentUserService.GetUsername();
+
+        var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == request.Parameters.WorkspaceId, false, cancellationToken);
+        if (canAccessWorkspace is null)
+        {
+            return Result<string>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+        }
+
+        var dashboardId = dashboardManager.GetLastDashboardKey(request.Parameters.WorkspaceId);
 
         if (string.IsNullOrEmpty(dashboardId))
         {
@@ -67,7 +78,7 @@ public class ChangeDashboardTypeCommandHandler : IRequestHandler<ChangeDashboard
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
         }
 
-        var dahsboardItem = dashboardManager.CreateDashboardItem(request.parameters.ChartType, sqlDataSource, dataMember, [Constants.Dashboards.Category, Constants.Dashboards.Value]);
+        var dahsboardItem = dashboardManager.CreateDashboardItem(request.Parameters.ChartType, sqlDataSource, dataMember, [Constants.Dashboards.Category, Constants.Dashboards.Value]);
 
         // Replace old item with new one
         dashboard.Items.Remove(oldItem);

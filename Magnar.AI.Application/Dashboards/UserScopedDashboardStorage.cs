@@ -1,19 +1,31 @@
 ﻿using DevExpress.DashboardWeb;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Concurrent;
-using System.IdentityModel.Claims;
-using System.Linq;
 using System.Xml.Linq;
 
 namespace Magnar.AI.Application.Dashboards;
 
+/// <summary>
+/// In-memory dashboard storage scoped by both user and workspace.
+/// 
+/// Each dashboard is stored under a composite key:
+///   {workspaceId}_{username}_{dashboardId}
+/// 
+/// This ensures that dashboards are isolated:
+///   - Per workspace (multi-tenant separation).
+///   - Per user (no cross-user sharing inside a workspace).
+/// 
+/// Note: This storage is ephemeral (lost when the app restarts).
+/// </summary>
 public class UserScopedDashboardStorage : IDashboardStorage
 {
     #region Members
     private readonly IHttpContextAccessor httpContextAccessor;
 
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, XDocument>> _dashboards
-        = new();
+    // Top-level dictionary:
+    //   Key   = full key (workspaceId_username_dashboardId)
+    //   Value = dictionary of dashboards for that scope
+    private readonly ConcurrentDictionary<string, XDocument> _dashboards = new();
     #endregion
 
     #region Constructor
@@ -23,51 +35,61 @@ public class UserScopedDashboardStorage : IDashboardStorage
     }
     #endregion
 
+    /// <summary>
+    /// Returns all dashboards available to the current user in all workspaces.
+    /// Extracts dashboards by matching the prefix _{username}_.
+    /// </summary>
     public IEnumerable<DashboardInfo> GetAvailableDashboardsInfo()
     {
-        var prefix = GetUserKey() + "_";
+        var workspaceId = GetWorkspaceId();
 
-        return _dashboards.Keys
-            .Where(k => k.StartsWith(prefix))
-            .Select(k => new DashboardInfo() { ID = k.Substring(prefix.Length), Name = k.Substring(prefix.Length) });
+        var prefix = $"{workspaceId}_{GetUsername()}";
+
+        var list = _dashboards.Keys
+            .Where(k => k.Contains(prefix))
+            .Select(k => new DashboardInfo() { ID = k, Name = k });
+
+        return list;
     }
 
-    public XDocument LoadDashboard(string dashboardID)
+    /// <summary>
+    /// Loads a dashboard document by its full key (workspaceId_userId_dashboardId).
+    /// Throws an exception if not found for this user/workspace.
+    /// </summary>
+    public XDocument LoadDashboard(string fullKey)
     {
-        var fullId = GetFullId(dashboardID);
-
-        if (_dashboards.TryGetValue(fullId, out var dashboardsForUser))
+        if (_dashboards.TryGetValue(fullKey, out var dashboard))
         {
-            if (dashboardsForUser.TryGetValue(dashboardID, out var doc))
-            {
-                return doc;
-            }
+            return dashboard;
         }
 
-        throw new InvalidOperationException("Dashboard not found for this user.");
+        throw new InvalidOperationException("Dashboard not found for this user in this workspace.");
     }
 
-    public void SaveDashboard(string dashboardID, XDocument dashboard)
+    /// <summary>
+    /// Saves (or updates) a dashboard document under its full key (workspaceId_userId_dashboardId). 
+    /// </summary>
+    public void SaveDashboard(string fullKey, XDocument dashboard)
     {
-        var fullId = GetFullId(dashboardID);
-        var dashboardsForUser = _dashboards.GetOrAdd(fullId, _ => new ConcurrentDictionary<string, XDocument>());
-        dashboardsForUser[dashboardID] = dashboard;
+        _dashboards[fullKey] = dashboard;
     }
 
-    public bool RemoveDashboard(string dashboardID)
+    /// <summary>
+    /// Removes a specific dashboard under its full key (workspaceId_userId_dashboardId). 
+    /// Returns true if removed, false if not found.
+    /// </summary>
+    public bool RemoveDashboard(string fullKey)
     {
-        var fullId = GetFullId(dashboardID);
-        if (_dashboards.TryGetValue(fullId, out var dashboardsForUser))
-        {
-            return dashboardsForUser.TryRemove(dashboardID, out _);
-        }
-
-        return false;
+        return _dashboards.TryRemove(fullKey, out _);
     }
 
-    public int RemoveAllForCurrentUser()
+    /// <summary>
+    /// Removes all dashboards belonging to the current user in the given workspace.
+    /// Returns the number of dashboards removed.
+    /// </summary>
+    public int RemoveAllForCurrentUser(int workspaceId)
     {
-        var prefix = GetUserKey() + "_";
+        var prefix = GetUserKey(workspaceId) + "_";
         var keys = _dashboards.Keys.Where(k => k.StartsWith(prefix)).ToList();
 
         int removed = 0;
@@ -82,34 +104,55 @@ public class UserScopedDashboardStorage : IDashboardStorage
         return removed; // number of dashboards removed
     }
 
-    public string GetLastDashboardKey()
+    /// <summary>
+    /// Returns the last (most recently added, alphabetically highest) dashboard key
+    /// for the current user in the given workspace.
+    /// Returns an empty string if none exist.
+    /// </summary>
+    public string GetLastDashboardKey(int workspaceId)
     {
-        var prefix = GetUserKey() + "_";
+        var prefix = GetUserKey(workspaceId) + "_";
         var keys = _dashboards.Keys.Where(k => k.StartsWith(prefix)).ToList();
 
-        if (!keys.Any())
+        if (keys.Count == 0)
         {
             return string.Empty;
         }
 
         var lastKey = keys.OrderByDescending(k => k).First();
 
-        return lastKey.Substring(prefix.Length);
+        return lastKey;
     }
 
     #region Private Methods
 
-    private string GetUserKey()
+    /// <summary>
+    /// Builds the user scope key: {workspaceId}_{username}.
+    /// Used as the base prefix for all dashboards for this user in this workspace.
+    /// </summary>
+    private string GetUserKey(int workspaceId)
+    {
+        var username = GetUsername();
+
+        return $"{workspaceId}_{username}";
+    }
+
+    /// <summary>
+    /// Gets the username from the current HttpContext user principal.
+    /// Falls back to NameIdentifier claim or "Anonymous".
+    /// </summary>
+    private string GetUsername()
     {
         var user = httpContextAccessor.HttpContext?.User;
+
         return user?.Identity?.IsAuthenticated == true
-            ? user.Identity.Name ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Anonymous"
+            ? user.Identity.Name ?? user.FindFirst(Constants.IdentityApi.ApiClaims.Username)?.Value ?? "Anonymous"
             : "Anonymous";
     }
 
-    private string GetFullId(string dashboardID)
+    private string? GetWorkspaceId()
     {
-        return $"{GetUserKey()}_{dashboardID}";
+        return httpContextAccessor.HttpContext?.Request.Headers["X-Workspace-Id"].ToString();
     }
     #endregion
 }

@@ -13,8 +13,6 @@ public interface IProviderRepository : IRepository<Provider>
 
     Task<ProviderDto> GetProviderAsync(int id, CancellationToken cancellationToken);
 
-    Task<OdataResponse<ProviderDto>> GetProvidersOdataAsync(ODataQueryOptions<Provider> filterOptions, CancellationToken cancellationToken);
-
     Task<bool> TestSqlProviderAsync(SqlServerProviderDetailsDto details, CancellationToken cancellationToken);
 
     string BuildSqlServerConnectionString(SqlServerProviderDetailsDto details);

@@ -95,19 +95,6 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
         }
     }
 
-    public async Task<OdataResponse<ProviderDto>> GetProvidersOdataAsync(ODataQueryOptions<Provider> filterOptions, CancellationToken cancellationToken)
-    {
-        var result = await OdataGetAsync(filterOptions, cancellationToken: cancellationToken);
-
-        var mappedProviders = mapper.Map<IEnumerable<ProviderDto>>(result.Value);
-
-        return new OdataResponse<ProviderDto>
-        {
-            TotalCount = result.TotalCount,
-            Value = mappedProviders
-        };
-    }
-
     public string BuildSqlServerConnectionString(SqlServerProviderDetailsDto details)
     {
         if(details is null)

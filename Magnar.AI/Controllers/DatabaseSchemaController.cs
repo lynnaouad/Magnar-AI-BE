@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 namespace Magnar.AI.Controllers;
 
-[Authorize]
 public class DatabaseSchemaController : BaseController
 {
     public DatabaseSchemaController(IMediator mediator) : base(mediator)
@@ -32,7 +31,7 @@ public class DatabaseSchemaController : BaseController
     [HttpGet("selected")]
     public async Task<IActionResult> LoadTablesFromFile(int providerId, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new GetSelectedTablesQuery(HttpContext.GetWorkspaceId(), providerId), cancellationToken);
+        var result = await Mediator.Send(new GetSelectedTablesQuery(providerId), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -44,7 +43,7 @@ public class DatabaseSchemaController : BaseController
     [HttpPost("annotate")]
     public async Task<IActionResult> AnnotateSchema([FromBody]IEnumerable<TableDto> selectedTables, int providerId, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new AnnotateDatabaseSchemaCommand(selectedTables, HttpContext.GetWorkspaceId(), providerId), cancellationToken);
+        var result = await Mediator.Send(new AnnotateDatabaseSchemaCommand(selectedTables, providerId), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);

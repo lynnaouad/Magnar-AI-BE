@@ -1,13 +1,11 @@
 ﻿using Magnar.AI.Application.Dto.Workspaces;
 using Magnar.AI.Application.Features.Providers.Queries;
 using Magnar.AI.Application.Features.Workspaces.Commands;
-using Microsoft.AspNetCore.Authorization;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Magnar.AI.Controllers;
 
-[Authorize]
 public class WorkspacesController : BaseController
 {
     public WorkspacesController(IMediator mediator) : base(mediator)
@@ -17,7 +15,7 @@ public class WorkspacesController : BaseController
     [HttpGet]
     public async Task<IActionResult> GetAllAsync(CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new GetWorkspacesQuery(Username), cancellationToken);
+        var result = await Mediator.Send(new GetWorkspacesQuery(), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);

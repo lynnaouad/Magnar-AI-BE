@@ -98,6 +98,7 @@ public static class Constants
             public const string OpenAIConfiguration = "OpenAIConfiguration";
             public const string Urls = "UrlsConfiguration";
             public const string VectorConfiguration = "VectorConfiguration";
+            public const string ApiKeysConfiguration = "ApiKeys";
         }
 
         public static class Keys
@@ -239,10 +240,10 @@ public static class Constants
 
         public static class Clients
         {
-            public static class RecruitmentApi
+            public static class Api
             {
                 public const string DefaultScope = "full offline_access";
-                public const string Id = "recruitment.api.d2944c22-84bd-40a7-9d86-76324a1c9fc5";
+                public const string Id = "magnar.ai.api.d2944c22-84bd-40a7-9d86-76324a1c9fc5";
                 public const string Secret = "SvB?2G)Tm?WI;6E'Y,%.nJ7-z?#xDqV<B`v@Iq<s(S*nl.4_:7PNFc9n(LV*%8";
 
                 public static class GrantTypes
@@ -250,6 +251,7 @@ public static class Constants
                     public const string Password = "password";
                     public const string ClientCredentials = "client_credentials";
                     public const string RefreshToken = "refresh_token";
+                    public const string ApiKey = "api_key";
                 }
             }
         }

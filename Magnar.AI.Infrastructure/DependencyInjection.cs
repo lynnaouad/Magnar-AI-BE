@@ -50,6 +50,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IIdentityRepository, IdentityRepository>();
         services.AddScoped<IProviderRepository, ProviderRepository>();
+        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -322,10 +322,10 @@ public sealed class IdentityRepository : IIdentityRepository
         string.Concat(urlConfiguration.Authority, "/", Constants.IdentityApi.Endpoints.Routes.AccessToken))
         {
             Content = new FormUrlEncodedContent([
-            new (Constants.IdentityApi.Endpoints.Parameters.GrantType, Constants.IdentityApi.Clients.RecruitmentApi.GrantTypes.Password),
-            new (Constants.IdentityApi.Endpoints.Parameters.ClientId, Constants.IdentityApi.Clients.RecruitmentApi.Id),
-            new (Constants.IdentityApi.Endpoints.Parameters.ClientSecret, Constants.IdentityApi.Clients.RecruitmentApi.Secret),
-            new (Constants.IdentityApi.Endpoints.Parameters.Scope, Constants.IdentityApi.Clients.RecruitmentApi.DefaultScope),
+            new (Constants.IdentityApi.Endpoints.Parameters.GrantType, Constants.IdentityApi.Clients.Api.GrantTypes.Password),
+            new (Constants.IdentityApi.Endpoints.Parameters.ClientId, Constants.IdentityApi.Clients.Api.Id),
+            new (Constants.IdentityApi.Endpoints.Parameters.ClientSecret, Constants.IdentityApi.Clients.Api.Secret),
+            new (Constants.IdentityApi.Endpoints.Parameters.Scope, Constants.IdentityApi.Clients.Api.DefaultScope),
             new (Constants.IdentityApi.Endpoints.Parameters.UserName, username),
             new (Constants.IdentityApi.Endpoints.Parameters.Password, password)]),
         };
@@ -338,9 +338,9 @@ public sealed class IdentityRepository : IIdentityRepository
         string.Concat(urlConfiguration.Authority, "/", Constants.IdentityApi.Endpoints.Routes.AccessToken))
         {
             Content = new FormUrlEncodedContent([
-            new (Constants.IdentityApi.Endpoints.Parameters.GrantType, Constants.IdentityApi.Clients.RecruitmentApi.GrantTypes.RefreshToken),
-            new (Constants.IdentityApi.Endpoints.Parameters.ClientId, Constants.IdentityApi.Clients.RecruitmentApi.Id),
-            new (Constants.IdentityApi.Endpoints.Parameters.ClientSecret, Constants.IdentityApi.Clients.RecruitmentApi.Secret),
+            new (Constants.IdentityApi.Endpoints.Parameters.GrantType, Constants.IdentityApi.Clients.Api.GrantTypes.RefreshToken),
+            new (Constants.IdentityApi.Endpoints.Parameters.ClientId, Constants.IdentityApi.Clients.Api.Id),
+            new (Constants.IdentityApi.Endpoints.Parameters.ClientSecret, Constants.IdentityApi.Clients.Api.Secret),
             new (Constants.IdentityApi.Endpoints.Parameters.RefreshToken, refreshToken)]),
         };
     }

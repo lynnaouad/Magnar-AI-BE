@@ -1,9 +1,11 @@
 ﻿using Magnar.AI.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using static Magnar.AI.Static.Constants;
 
 namespace Magnar.AI.Controllers;
 
+[Authorize]
 [Route("api/[controller]")]
 [Route($"api/{{{RouteParameters.WorkspaceParameterName}}}/[controller]")]
 [ApiController]
@@ -16,8 +18,6 @@ public abstract class BaseController : ControllerBase
     }
 
     protected string Username { get => User?.FindFirstValue(IdentityApi.ApiClaims.Username) ?? string.Empty; }
-
-    protected int WorkspaceId { get => HttpContext.GetWorkspaceId(); }
 
     protected IMediator Mediator { get; }
 }

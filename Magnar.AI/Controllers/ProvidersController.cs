@@ -2,15 +2,12 @@
 using Magnar.AI.Application.Features.Providers.Commands;
 using Magnar.AI.Application.Features.Providers.Queries;
 using Magnar.AI.Domain.Entities;
-using Magnar.AI.Extensions;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OData.Query;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Magnar.AI.Controllers;
 
-[Authorize]
 public class ProvidersController : BaseController
 {
     public ProvidersController(IMediator mediator) : base(mediator)
@@ -32,9 +29,9 @@ public class ProvidersController : BaseController
 
     [HttpGet]
     [Route("odata")]
-    public async Task<IActionResult> GetAllAsync(ODataQueryOptions<Provider> filterOptions, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllAsync([FromQuery] int workspaceId, ODataQueryOptions<Provider> filterOptions, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new GetProvidersOdataQuery(filterOptions), cancellationToken);
+        var result = await Mediator.Send(new GetProvidersOdataQuery(workspaceId, filterOptions), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);
@@ -46,7 +43,7 @@ public class ProvidersController : BaseController
     [HttpPost]
     public async Task<IActionResult> CreateAsync([FromBody] ProviderDto provider, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new CreateProviderCommand(provider, HttpContext.GetWorkspaceId()), cancellationToken);
+        var result = await Mediator.Send(new CreateProviderCommand(provider), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);

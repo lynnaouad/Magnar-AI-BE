@@ -1,7 +1,4 @@
-﻿using Magnar.AI.Application.Dto.AI;
-using System.Text.Json;
-
-namespace Magnar.AI.Application.Helpers;
+﻿namespace Magnar.AI.Application.Helpers;
 
 public static class PromptLoader
 {

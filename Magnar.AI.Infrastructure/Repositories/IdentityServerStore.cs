@@ -21,6 +21,8 @@ public sealed class IdentityServerStore
         return
         [
             new IdentityResources.OpenId(),
+            new IdentityResources.Profile(),
+            new IdentityResources.Email(),
             new IdentityResource(Constants.IdentityApi.ApiResourceNames.Custom, [Constants.IdentityApi.ApiClaims.Username, Constants.IdentityApi.ApiClaims.Email])
         ];
     }

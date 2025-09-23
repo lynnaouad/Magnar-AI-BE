@@ -1,5 +1,4 @@
 ﻿using Magnar.AI.Application.Interfaces.Infrastructure;
-using Magnar.AI.Domain.Entities;
 
 namespace Magnar.AI.Application.Features.Providers.Commands
 {
@@ -9,14 +8,16 @@ namespace Magnar.AI.Application.Features.Providers.Commands
     {
         #region Members
         private readonly IUnitOfWork unitOfWork;
+        private readonly ICurrentUserService currentUserService;
         private readonly IKernelPluginService kernelPluginService;
         #endregion
 
         #region Constructor
-        public DeleteProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService)
+        public DeleteProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService, ICurrentUserService currentUserService)
         {
             this.unitOfWork = unitOfWork;
             this.kernelPluginService = kernelPluginService;
+            this.currentUserService = currentUserService;
         }
         #endregion
 
@@ -26,6 +27,12 @@ namespace Magnar.AI.Application.Features.Providers.Commands
             if (provider is null)
             {
                 return Result.CreateFailure([new(Constants.Errors.NotFound)]);
+            }
+
+            var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == currentUserService.GetUsername() && x.Id == provider.WorkspaceId, false, cancellationToken);
+            if (canAccessWorkspace is null)
+            {
+                return Result<int>.CreateFailure([new(Constants.Errors.Unauthorized)]);
             }
 
             unitOfWork.ProviderRepository.Delete(request.Id);

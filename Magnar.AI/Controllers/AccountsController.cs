@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 namespace Magnar.AI.Controllers;
 
-[Authorize]
 public sealed class AccountsController : BaseController
 {
     public AccountsController(IMediator mediator)

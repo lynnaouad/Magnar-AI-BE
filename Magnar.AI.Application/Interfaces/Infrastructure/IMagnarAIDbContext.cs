@@ -14,4 +14,6 @@ public interface IMagnarAIDbContext
     DbSet<DataProtectionKey> DataProtectionKeys { get; }
 
     DbSet<Provider> Provider { get; }
+
+    DbSet<ApiKey> ApiKey { get; }
 }

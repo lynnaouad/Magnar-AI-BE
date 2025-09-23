@@ -28,6 +28,8 @@ public class MagnarAIDbContext : IdentityDbContext<ApplicationUser, IdentityRole
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
+    public DbSet<ApiKey> ApiKey => Set<ApiKey>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.AddInterceptors(auditableEntityInterceptor);

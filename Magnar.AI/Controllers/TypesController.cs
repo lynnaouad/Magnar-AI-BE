@@ -7,7 +7,6 @@ using System.Linq;
 
 namespace Magnar.AI.Controllers;
 
-[Authorize]
 public sealed class TypesController : BaseController
 {
     public TypesController(IMediator mediator) : base(mediator)

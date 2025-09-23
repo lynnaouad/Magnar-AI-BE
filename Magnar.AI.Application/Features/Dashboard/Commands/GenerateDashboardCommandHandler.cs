@@ -12,7 +12,7 @@ using System.Xml.Linq;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
-public sealed record GenerateDashboardCommand(DashboardPromptDto parameters, int WorkspaceId) : IRequest<Result<string>>;
+public sealed record GenerateDashboardCommand(DashboardPromptDto Parameters) : IRequest<Result<string>>;
 
 public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboardCommand, Result<string>>
 {
@@ -21,7 +21,7 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
     private readonly IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore;
     private readonly IAIManager aiManager;
     private readonly IUnitOfWork unitOfWork;
-    private readonly IMapper mapper;
+    private readonly ICurrentUserService currentUserService;
     #endregion
 
     #region Constructor
@@ -29,23 +29,31 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
    public GenerateDashboardCommandHandler(
         IDashboardManager dashboardManager,
         IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore,
+        ICurrentUserService currentUserService,
         IAIManager aiManager,
-        IMapper mapper,
         IUnitOfWork unitOfWork)
     {
         this.dashboardManager = dashboardManager;
         this.vectorStore = vectorStore;
         this.aiManager = aiManager;
         this.unitOfWork = unitOfWork;
-        this.mapper = mapper;
+        this.currentUserService = currentUserService;
     }
     #endregion
 
     public async Task<Result<string>> Handle(GenerateDashboardCommand request, CancellationToken cancellationToken)
     {
+        var username = currentUserService.GetUsername();
+
+        var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == request.Parameters.WorkspaceId, false, cancellationToken);
+        if (canAccessWorkspace is null)
+        {
+            return Result<string>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+        }
+
         // Check connection
-        var sqlConnection = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.SqlServer, cancellationToken);
-        if (sqlConnection is null)
+        var sqlConnection = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.Parameters.WorkspaceId, ProviderTypes.SqlServer, cancellationToken);
+        if (sqlConnection is null || sqlConnection?.Details?.SqlServerConfiguration is null)
         {
             return Result<string>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
         }
@@ -53,7 +61,7 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
         // Perform vector search to retrieve tables schema
         var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ProviderId == sqlConnection.Id };
 
-        VectorSearchResponse<DatabaseSchemaEmbedding> response = await vectorStore.VectorSearchAsync(request.parameters.Prompt, 10, options, cancellationToken);
+        VectorSearchResponse<DatabaseSchemaEmbedding> response = await vectorStore.VectorSearchAsync(request.Parameters.Prompt, 10, options, cancellationToken);
         if (!response.Success || response.SearchResults is null || !response.SearchResults.Any())
         {
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
@@ -63,8 +71,8 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
         var systemMessage = await PromptLoader.LoadPromptAsync("generate-dashboard-sql-system.txt", Constants.Folders.DashboardPrompts);
         var userMessage = await PromptLoader.LoadPromptAsync("generate-dashboard-sql-user.txt", Constants.Folders.DashboardPrompts);
 
-        systemMessage = string.Format(systemMessage, string.Join("\n\n", response.SearchResults.Select(r => r.Record.Text)), request.parameters.ChartType);
-        userMessage = string.Format(userMessage, request.parameters.Prompt);
+        systemMessage = string.Format(systemMessage, string.Join("\n\n", response.SearchResults.Select(r => r.Record.Text)), request.Parameters.ChartType);
+        userMessage = string.Format(userMessage, request.Parameters.Prompt);
 
         // Generate SQL Query
         var seamanticSearchResult = await aiManager.SemanticSearchAsync(systemMessage, userMessage, cancellationToken);
@@ -91,17 +99,17 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
         }
 
-        var dashboard = dashboardManager.CreateDashboard(sqlConnection.Details.SqlServerConfiguration, result.Sql, request.parameters.ChartType, result.Columns);
+        var dashboard = dashboardManager.CreateDashboard(sqlConnection.Details.SqlServerConfiguration, result.Sql, request.Parameters.ChartType, result.Columns);
 
         XDocument xdoc = dashboard.SaveToXDocument();
 
         var dashboardId = $"AI_{Guid.NewGuid():N}";
 
         // Claen old dashboards from memory
-        dashboardManager.RemoveAllForCurrentUser();
+        dashboardManager.RemoveAllForCurrentUser(request.Parameters.WorkspaceId);
 
-        dashboardManager.SaveDashboard(dashboardId, xdoc);
+        var fullkey = dashboardManager.SaveDashboard(request.Parameters.WorkspaceId, username, dashboardId, xdoc);
 
-        return Result<string>.CreateSuccess(dashboardId);
+        return Result<string>.CreateSuccess(fullkey);
     }
 }

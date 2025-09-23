@@ -10,20 +10,28 @@ namespace Magnar.AI.Application.Features.Providers.Commands
         #region Members
         private readonly IUnitOfWork unitOfWork;
         private readonly IMapper mapper;
+        private readonly ICurrentUserService currentUserService;
         private readonly IKernelPluginService kernelPluginService;
         #endregion
 
         #region Constructor
-        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService)
+        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService, ICurrentUserService currentUserService)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
             this.kernelPluginService = kernelPluginService;
+            this.currentUserService = currentUserService;
         }
         #endregion
 
         public async Task<Result> Handle(UpdateProviderCommand request, CancellationToken cancellationToken)
         {
+            var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == currentUserService.GetUsername() && x.Id == request.Model.WorkspaceId, false, cancellationToken);
+            if (canAccessWorkspace is null)
+            {
+                return Result<int>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+            }
+
             var provider = mapper.Map<Provider>(request.Model);
 
             if (provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Any())

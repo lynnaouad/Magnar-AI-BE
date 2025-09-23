@@ -3,8 +3,8 @@
     "Clients": [
       {
         "Enabled": true,
-        "ClientId": "recruitment.api.d2944c22-84bd-40a7-9d86-76324a1c9fc5",
-        "ClientName": "recruitment.api",
+        "ClientId": "magnar.ai.api.d2944c22-84bd-40a7-9d86-76324a1c9fc5",
+        "ClientName": "magnar.ai.api",
         "ClientSecrets": [
           {
             "Value": "6iUA26gCje9VZA2mXEl+d9PoHYjQH4gtqiRPvx92X7U="
@@ -25,6 +25,19 @@
         "AccessTokenLifetime": 3600,
         "AllowOfflineAccess": true,
         "RefreshTokenUsage": 1
+      },
+      {
+        "ClientId": "api-key-exchange",
+        "AllowedGrantTypes": [ "api_key" ],
+        "AllowedScopes": [
+          "read",
+          "write",
+          "modify",
+          "full",
+          "offline_access"
+        ],
+        "AccessTokenLifetime": 900, // 15 min
+        "AllowOfflineAccess": false
       }
     ]
   }

@@ -283,7 +283,7 @@ namespace Magnar.AI.Application.Kernel
             {
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
-                    [Constants.IdentityApi.Endpoints.Parameters.GrantType] = Constants.IdentityApi.Clients.RecruitmentApi.GrantTypes.Password,
+                    [Constants.IdentityApi.Endpoints.Parameters.GrantType] = Constants.IdentityApi.Clients.Api.GrantTypes.Password,
                     [Constants.IdentityApi.Endpoints.Parameters.UserName] = api.Username!,
                     [Constants.IdentityApi.Endpoints.Parameters.Password] = api.Password!,
                     [Constants.IdentityApi.Endpoints.Parameters.ClientId] = api.ClientId!,
@@ -311,7 +311,7 @@ namespace Magnar.AI.Application.Kernel
             {
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
-                    [Constants.IdentityApi.Endpoints.Parameters.GrantType] = Constants.IdentityApi.Clients.RecruitmentApi.GrantTypes.ClientCredentials,
+                    [Constants.IdentityApi.Endpoints.Parameters.GrantType] = Constants.IdentityApi.Clients.Api.GrantTypes.ClientCredentials,
                     [Constants.IdentityApi.Endpoints.Parameters.ClientId] = api.ClientId!,
                     [Constants.IdentityApi.Endpoints.Parameters.ClientSecret] = api.ClientSecret!,
                     [Constants.IdentityApi.Endpoints.Parameters.Scope] = api.Scope ?? ""

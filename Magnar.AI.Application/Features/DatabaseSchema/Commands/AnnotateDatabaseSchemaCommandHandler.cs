@@ -8,16 +8,17 @@ using System.Text.Json;
 
 namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 {
-    public sealed record AnnotateDatabaseSchemaCommand(IEnumerable<TableDto> SelectedTables, int WorkspaceId, int ProviderId) : IRequest<Result>;
+    public sealed record AnnotateDatabaseSchemaCommand(IEnumerable<TableDto> SelectedTables, int ProviderId) : IRequest<Result>;
 
     public class AnnotateDatabaseSchemaCommandHandler : IRequestHandler<AnnotateDatabaseSchemaCommand, Result>
     {
         #region Members
         private readonly IUnitOfWork unitOfWork;
-        private ISchemaManager schemaManager;
-        private IAIManager aiManager;
+        private readonly ISchemaManager schemaManager;
+        private readonly IAIManager aiManager;
         private readonly IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore;
         private readonly VectorConfiguration vectoronfiguration;
+        private readonly ICurrentUserService currentUserService;
         #endregion
 
         #region Constructor
@@ -26,6 +27,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             IAIManager aiManager,
             IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore,
             IOptions<VectorConfiguration> vectoronfiguration,
+            ICurrentUserService currentUserService,
             ISchemaManager schemaManager)
         {
             this.unitOfWork = unitOfWork;
@@ -33,27 +35,41 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             this.aiManager = aiManager;
             this.vectorStore = vectorStore;
             this.vectoronfiguration = vectoronfiguration.Value;
+            this.currentUserService = currentUserService;
         }
         #endregion
 
         public async Task<Result> Handle(AnnotateDatabaseSchemaCommand request, CancellationToken cancellationToken)
         {
-            await schemaManager.UpsertFileAsync(request.SelectedTables, request.WorkspaceId, request.ProviderId, cancellationToken);
+            var username = currentUserService.GetUsername();
+
+            var provider = await unitOfWork.ProviderRepository.GetAsync(request.ProviderId, false, cancellationToken);
+            if (provider is null)
+            {
+                return Result.CreateFailure([new(Constants.Errors.NotFound)]);
+            }
+
+            var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == provider.WorkspaceId, false, cancellationToken);
+            if (canAccessWorkspace is null)
+            {
+                return Result.CreateFailure([new(Constants.Errors.Unauthorized)]);
+            }
+
+            await schemaManager.UpsertFileAsync(request.SelectedTables, provider.WorkspaceId, request.ProviderId, cancellationToken);
 
             if (!vectoronfiguration.EnableVectors)
             {
                 return Result.CreateSuccess();
             }
 
-            var allFileTables = await schemaManager.LoadFromFileAsync(request.WorkspaceId, request.ProviderId, cancellationToken);
+            var allFileTables = await schemaManager.LoadFromFileAsync(provider.WorkspaceId, request.ProviderId, cancellationToken);
 
-            await StoreTablesInVectorStore(allFileTables, request.SelectedTables, request.WorkspaceId, request.ProviderId, cancellationToken);
+            await StoreTablesInVectorStore(allFileTables, request.SelectedTables, provider.WorkspaceId, request.ProviderId, cancellationToken);
 
             return Result.CreateSuccess();
         }
 
         #region Private Methods
-
         private async Task StoreTablesInVectorStore(IEnumerable<TableDto> allTables, IEnumerable<TableDto> requestedTables, int workspaceId, int connectionId, CancellationToken cancellationToken)
         {
             List<DatabaseSchemaEmbedding> embeddings = [];

@@ -2,15 +2,12 @@
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
-using Magnar.AI.Application.Services;
-using Microsoft.Identity.Client;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
-public sealed record ExecutePromptCommand(PromptDto parameters, int workspaceId) : IRequest<Result<ChatResponseDto>>;
+public sealed record ExecutePromptCommand(PromptDto Parameters, int WorkspaceId) : IRequest<Result<ChatResponseDto>>;
 
 public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand, Result<ChatResponseDto>>
 {
@@ -18,6 +15,7 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
     private readonly IAIManager aiManager;
     private readonly IKernelPluginService kernelPluginService;
     private readonly IUnitOfWork unitOfWork;
+    private readonly ICurrentUserService currentUserService;
     #endregion
 
     #region Constructor
@@ -25,23 +23,33 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
     public ExecutePromptCommandHandler(
         IUnitOfWork unitOfWork,
         IAIManager aiManager,
+        ICurrentUserService currentUserService,
         IKernelPluginService kernelPluginService)
     {
         this.aiManager = aiManager;
         this.kernelPluginService = kernelPluginService;
         this.unitOfWork = unitOfWork;
+        this.currentUserService = currentUserService;
     }
     #endregion
 
     public async Task<Result<ChatResponseDto>> Handle(ExecutePromptCommand request, CancellationToken cancellationToken)
     {
-        var defaultProvider = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.workspaceId, ProviderTypes.API, cancellationToken);
+        var username = currentUserService.GetUsername();
+
+        var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == request.WorkspaceId, false, cancellationToken);
+        if (canAccessWorkspace is null)
+        {
+            return Result<ChatResponseDto>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+        }
+
+        var defaultProvider = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.API, cancellationToken);
         if (defaultProvider is null)
         {
             return Result<ChatResponseDto>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
         }
 
-        var prompt = request.parameters.Prompt;
+        var prompt = request.Parameters.Prompt;
 
         var history = new ChatHistory();
         history.AddUserMessage(prompt);
@@ -49,7 +57,7 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
          var systemMessage = await PromptLoader.LoadPromptAsync("execute-registered-functions-system.txt");
          history.AddSystemMessage(systemMessage);
 
-        var kernel = kernelPluginService.GetKernel(request.workspaceId, defaultProvider.Id).Kernel;
+        var kernel = kernelPluginService.GetKernel(request.WorkspaceId, defaultProvider.Id).Kernel;
 
         var functions = kernel.Plugins.SelectMany(p => p);
 
@@ -71,7 +79,7 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
 
         if (responseText.Contains("No suitable function available", StringComparison.OrdinalIgnoreCase))
         {
-            responseText = await ExecuteDefaultSqlFallbackFunction(allMessages, request.workspaceId, prompt, cancellationToken) ?? responseText;
+            responseText = await ExecuteDefaultSqlFallbackFunction(allMessages, request.WorkspaceId, prompt, cancellationToken) ?? responseText;
         }
 
         var dto = new ChatResponseDto

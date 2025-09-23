@@ -14,12 +14,14 @@ namespace Magnar.AI.Application.Interfaces.Managers
 
         void UpdateDashboardLayout(Dashboard dashboard, DashboardItem dashboardItem);
 
-        void RemoveAllForCurrentUser();
+        void RemoveAllForCurrentUser(int workspaceId);
 
-        void SaveDashboard(string dashboardId, XDocument xdoc);
+        string SaveDashboard(int workspaceId, string username, string dashboardId, XDocument xdoc);
 
-        string GetLastDashboardKey();
+        string SaveDashboard(string fullkey, XDocument xdoc);
 
-        XDocument LoadDashboard(string dashboardID);
+        string GetLastDashboardKey(int workspaceId);
+
+        XDocument LoadDashboard(string fullKey);
     }
 }

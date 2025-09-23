@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.DataProtection;
 
 namespace Magnar.AI.Controllers;
 
-[Authorize]
 public class DefaultDashboardController : DashboardController
 {
     public DefaultDashboardController(DashboardConfigurator configurator, IDataProtectionProvider? dataProtectionProvider)

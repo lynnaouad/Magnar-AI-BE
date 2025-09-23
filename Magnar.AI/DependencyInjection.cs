@@ -1,18 +1,19 @@
-﻿using System;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text.Json.Serialization;
-using Duende.IdentityServer.Services;
+﻿using Duende.IdentityServer.Services;
 using Magnar.AI.Application.Configuration;
+using Magnar.AI.Application.Interfaces.Services;
+using Magnar.AI.Authentication;
 using Magnar.AI.Domain.Entities;
 using Magnar.AI.Exceptions;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
 using Magnar.AI.Infrastructure.Repositories;
+using Magnar.AI.Services;
 using Magnar.Recruitment.Infrastructure.Repositories;
 using Magnar.Recruitment.Infrastructure.Services;
+using Magnar.Recruitment.Infrastructure.Validators;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.OData;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +23,11 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System;
+using System.Globalization;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text.Json.Serialization;
 
 namespace Magnar.AI;
 
@@ -43,7 +49,15 @@ internal static class DependencyInjection
             .ConfigureHealthChecks()
             .ConfigureExceptionHandlers()
             .ConfigureAuthentication(environment)
-            .ConfigureApiFeatures();
+            .ConfigureApiFeatures()
+            .RegisterServices();
+
+        return services;
+    }
+
+    private static IServiceCollection RegisterServices(this IServiceCollection services)
+    {
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         return services;
     }
@@ -177,16 +191,15 @@ internal static class DependencyInjection
             .AddInMemoryIdentityResources(IdentityServerStore.GetIdentityResources())
             .AddInMemoryApiResources(IdentityServerStore.GetApiResources())
             .AddInMemoryApiScopes(IdentityServerStore.GetApiScopes())
-            .AddAspNetIdentity<ApplicationUser>();
+            .AddAspNetIdentity<ApplicationUser>()
+            .AddExtensionGrantValidator<ApiKeyGrantValidator>();
 
         services.AddTransient<IProfileService, CustomProfileService>();
 
-        services
-            .AddAuthentication(options =>
+        services.AddAuthentication(options =>
             {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = "SmartAuth";
+                options.DefaultChallengeScheme = "SmartAuth";
             })
             .AddJwtBearer(options =>
             {
@@ -199,6 +212,15 @@ internal static class DependencyInjection
 
                 options.RequireHttpsMetadata = false;
                 options.Authority = urlsConfig.Authority;
+            })
+            .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationSchemeOptions.DefaultScheme, options => { })
+            .AddPolicyScheme("SmartAuth", "Smart Authentication", options =>
+            {
+                options.ForwardDefaultSelector = context =>
+                {
+                    IHeaderDictionary requestHeaders = context.Request.Headers;
+                    return AuthenticationSchemeSelector.SelectScheme(requestHeaders);
+                };
             });
 
         return services;
