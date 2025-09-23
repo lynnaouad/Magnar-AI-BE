@@ -1,6 +1,7 @@
 ﻿using Magnar.AI.Application.Dto.AI;
 using Magnar.AI.Application.Models.Responses.AI;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace Magnar.AI.Application.Interfaces.Managers;
 
@@ -40,7 +41,7 @@ public interface IAIManager
     /// <param name="chatHistory">The chat history containing previous messages for context.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ChatCompletionResponse"/> representing the chat completion response, or null if generation fails.</returns>
-    Task<ChatCompletionResponse> GetChatCompletionAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default);
+    Task<ChatCompletionResponse> GetChatCompletionAsync(ChatHistory chatHistory, OpenAIPromptExecutionSettings? executionSettings = null, Microsoft.SemanticKernel.Kernel? kernel = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a chat completion response based on the provided system and user messages.

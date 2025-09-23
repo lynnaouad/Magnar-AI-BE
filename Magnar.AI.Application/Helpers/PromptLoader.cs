@@ -13,7 +13,7 @@ public static class PromptLoader
     /// <param name="promptName">Name of the prompt.</param>
     /// <param name="promptsFolder">Folder containing prompts.</param>
     /// <returns>Prompt content as string.</returns>
-    public static async Task<string> LoadPromptAsync(string promptName, string promptsFolder)
+    public static async Task<string> LoadPromptAsync(string promptName, string? promptsFolder = null)
     {
         var cacheKey = $"{promptsFolder}/{promptName}";
         if (_cache.TryGetValue(cacheKey, out string value))
@@ -21,7 +21,10 @@ public static class PromptLoader
             return value;
         }
 
-        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Constants.Folders.Assets, Constants.Folders.Prompts, promptsFolder, $"{promptName}");
+        var path = !string.IsNullOrEmpty(promptsFolder) 
+            ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Constants.Folders.Assets, Constants.Folders.Prompts, promptsFolder, $"{promptName}")
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Constants.Folders.Assets, Constants.Folders.Prompts, $"{promptName}");
+
         if (!File.Exists(path))
         {
             throw new FileNotFoundException($"Prompt '{promptName}' not found in '{promptsFolder}'");

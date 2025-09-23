@@ -243,8 +243,9 @@ namespace Magnar.AI.Infrastructure.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     WorkspaceId = table.Column<int>(type: "int", nullable: false),
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Details = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
@@ -297,6 +298,13 @@ namespace Magnar.AI.Infrastructure.Migrations
                 table: "ApiProviderDetails",
                 columns: new[] { "ProviderId", "FunctionName" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Provider_Type_IsDefault",
+                table: "Provider",
+                columns: new[] { "Type", "IsDefault" },
+                unique: true,
+                filter: "[IsDefault] = 1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Provider_WorkspaceId",

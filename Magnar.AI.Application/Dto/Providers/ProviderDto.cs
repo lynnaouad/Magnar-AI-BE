@@ -8,6 +8,8 @@ namespace Magnar.AI.Application.Dto.Providers
 
         public int WorkspaceId { get; set; }
 
+        public bool IsDefault { get; set; }
+
         public string Name { get; set; } = string.Empty;
 
         public ProviderTypes Type { get; set; }

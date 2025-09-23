@@ -1,6 +1,5 @@
 ﻿using Magnar.AI.Application.Dto.AI.SemanticSearch;
 using Magnar.AI.Application.Dto.Dashboard;
-using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
@@ -13,7 +12,7 @@ using System.Xml.Linq;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
-public sealed record GenerateDashboardCommand(DashboardPromptDto parameters) : IRequest<Result<string>>;
+public sealed record GenerateDashboardCommand(DashboardPromptDto parameters, int WorkspaceId) : IRequest<Result<string>>;
 
 public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboardCommand, Result<string>>
 {
@@ -45,16 +44,14 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
     public async Task<Result<string>> Handle(GenerateDashboardCommand request, CancellationToken cancellationToken)
     {
         // Check connection
-        var sqlConnection = await unitOfWork.ProviderRepository.FirstOrDefaultAsync(x => x.Type == ProviderTypes.SqlServer, false, cancellationToken);
-        if(sqlConnection is null)
+        var sqlConnection = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.SqlServer, cancellationToken);
+        if (sqlConnection is null)
         {
             return Result<string>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
         }
 
-        var defaultConnection = mapper.Map<ProviderDto>(sqlConnection);
-
         // Perform vector search to retrieve tables schema
-        var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ProviderId == defaultConnection.Id };
+        var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ProviderId == sqlConnection.Id };
 
         VectorSearchResponse<DatabaseSchemaEmbedding> response = await vectorStore.VectorSearchAsync(request.parameters.Prompt, 10, options, cancellationToken);
         if (!response.Success || response.SearchResults is null || !response.SearchResults.Any())
@@ -62,7 +59,7 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
         }
 
-        // Load prompt messages
+        // Load assistant messages
         var systemMessage = await PromptLoader.LoadPromptAsync("generate-dashboard-sql-system.txt", Constants.Folders.DashboardPrompts);
         var userMessage = await PromptLoader.LoadPromptAsync("generate-dashboard-sql-user.txt", Constants.Folders.DashboardPrompts);
 
@@ -89,12 +86,12 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboardUpdateSchema)]);
         }
 
-        if (!IsSafeSelectQuery(result.Sql))
+        if (!Utilities.IsSafeSelectQuery(result.Sql))
         {
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
         }
 
-        var dashboard = dashboardManager.CreateDashboard(defaultConnection.Details.SqlServerConfiguration, result.Sql, request.parameters.ChartType, result.Columns);
+        var dashboard = dashboardManager.CreateDashboard(sqlConnection.Details.SqlServerConfiguration, result.Sql, request.parameters.ChartType, result.Columns);
 
         XDocument xdoc = dashboard.SaveToXDocument();
 
@@ -107,36 +104,4 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
 
         return Result<string>.CreateSuccess(dashboardId);
     }
-
-    #region Private Methods
-    private bool IsSafeSelectQuery(string sql)
-    {
-        if (string.IsNullOrWhiteSpace(sql))
-        {
-            return false;
-        }
-
-        // Normalize for comparison
-        string upperSql = sql.Trim().ToUpperInvariant();
-
-        // Must start with SELECT
-        if (!upperSql.StartsWith("SELECT"))
-        {
-            return false;
-        }
-
-        // Disallow dangerous commands anywhere
-        string[] forbidden = { "INSERT", "UPDATE", "DELETE", "EXEC", "MERGE", "DROP", "ALTER", "TRUNCATE" };
-
-        foreach (var keyword in forbidden)
-        {
-            if (upperSql.Contains(keyword + " ")) // space prevents matching substrings like 'EXECUTE'
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-    #endregion
 }

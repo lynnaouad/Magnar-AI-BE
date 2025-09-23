@@ -1,4 +1,9 @@
 ﻿using Magnar.AI.Application.Dto.AI;
+using Magnar.AI.Application.Helpers;
+using Magnar.AI.Application.Interfaces.Infrastructure;
+using Magnar.AI.Application.Interfaces.Managers;
+using Magnar.AI.Application.Services;
+using Microsoft.Identity.Client;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -10,63 +15,130 @@ public sealed record ExecutePromptCommand(PromptDto parameters, int workspaceId)
 public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand, Result<ChatResponseDto>>
 {
     #region Members
-    private readonly IChatCompletionService completionService;
-    private readonly IApiProviderService apiProviderService;
+    private readonly IAIManager aiManager;
+    private readonly IKernelPluginService kernelPluginService;
+    private readonly IUnitOfWork unitOfWork;
     #endregion
 
     #region Constructor
 
     public ExecutePromptCommandHandler(
-        IChatCompletionService completionService,
-        IApiProviderService apiProviderService)
+        IUnitOfWork unitOfWork,
+        IAIManager aiManager,
+        IKernelPluginService kernelPluginService)
     {
-        this.completionService = completionService;
-        this.apiProviderService = apiProviderService;
+        this.aiManager = aiManager;
+        this.kernelPluginService = kernelPluginService;
+        this.unitOfWork = unitOfWork;
     }
     #endregion
 
     public async Task<Result<ChatResponseDto>> Handle(ExecutePromptCommand request, CancellationToken cancellationToken)
     {
+        var defaultProvider = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.workspaceId, ProviderTypes.API, cancellationToken);
+        if (defaultProvider is null)
+        {
+            return Result<ChatResponseDto>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
+        }
+
         var prompt = request.parameters.Prompt;
 
         var history = new ChatHistory();
         history.AddUserMessage(prompt);
 
-        history.AddSystemMessage(@"
-You are not allowed to answer directly. 
-You must call one of the registered functions. 
-Every parameter in the schema must be checked.
-If the user provided a value for a parameter, you must include it exactly as stated.
-Never ignore parameters explicitly mentioned by the user.
-Use the exact values from the user prompt when filling parameters. 
-If none apply, say 'No suitable function available.' 
-Never return lists or facts directly.");
+         var systemMessage = await PromptLoader.LoadPromptAsync("execute-registered-functions-system.txt");
+         history.AddSystemMessage(systemMessage);
 
-
-        var kernel = apiProviderService.GetKernel(request.workspaceId).Kernel;
+        var kernel = kernelPluginService.GetKernel(request.workspaceId, defaultProvider.Id).Kernel;
 
         var functions = kernel.Plugins.SelectMany(p => p);
 
-        OpenAIPromptExecutionSettings openAIPromptExecutionSettings = new()
-        {
-            FunctionChoiceBehavior = FunctionChoiceBehavior.Required(functions)
-        };
+        var allMessages = new List<ChatMessageDto>();
 
-        var result = await completionService.GetChatMessageContentAsync(
-            history,
-            executionSettings: openAIPromptExecutionSettings,
-            kernel: kernel);
+        var result = await aiManager.GetChatCompletionAsync(history, executionSettings: new()
+            {
+                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(functions)
+            }, kernel: kernel, cancellationToken: cancellationToken);
+
+        string responseText = result.Content ?? string.Empty;
+
+        // Add main history
+        allMessages.AddRange(history.Where(x => x.Role != AuthorRole.System).Select(m => new ChatMessageDto
+        {
+            Role = m.Role.ToString(),
+            Content = m.Content ?? string.Empty
+        }));
+
+        if (responseText.Contains("No suitable function available", StringComparison.OrdinalIgnoreCase))
+        {
+            responseText = await ExecuteDefaultSqlFallbackFunction(allMessages, request.workspaceId, prompt, cancellationToken) ?? responseText;
+        }
 
         var dto = new ChatResponseDto
         {
-            LatestResult = result.Content ?? string.Empty, 
-            Messages = [.. history.Select(m => new ChatMessageDto
-            {
-                Role = m.Role.ToString(),
-                Content = m.Content ?? string.Empty
-            })]
+            LatestResult = responseText ?? string.Empty,
+            Messages = allMessages
         };
 
         return Result<ChatResponseDto>.CreateSuccess(dto);
     }
+
+    #region Private Methods
+    private async Task<string> ExecuteDefaultSqlFallbackFunction(List<ChatMessageDto> allMessages, int workspaceId, string prompt, CancellationToken cancellationToken)
+    {
+        allMessages.AddRange(new ChatMessageDto
+        {
+            Role = AuthorRole.Assistant.ToString(),
+            Content = "No suitable function available, will try to generate sql query using configured database schema, if exists."
+        });
+
+        kernelPluginService.RegisterDefaultSqlFunction(workspaceId);
+        var sqlKernel = kernelPluginService.GetDefaultKernel(workspaceId).Kernel;
+        var defaultFunctions = sqlKernel.Plugins.SelectMany(p => p);
+
+        var sqlHistory = new ChatHistory();
+        sqlHistory.AddUserMessage(prompt);
+
+        var sqlResult = await aiManager.GetChatCompletionAsync(sqlHistory, executionSettings: new()
+        {
+            FunctionChoiceBehavior = FunctionChoiceBehavior.Required(defaultFunctions)
+        }, kernel: sqlKernel, cancellationToken: cancellationToken);
+
+        // Capture assistant messages (but skip tool unless error)
+        foreach (var msg in sqlHistory)
+        {
+            if (msg.Role == AuthorRole.User)
+            {
+                continue;
+            }
+
+            if (msg.Role == AuthorRole.Tool)
+            {
+                var toolOutput = msg.Content ?? string.Empty;
+
+                // only show if it looks like an error
+                if (toolOutput.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+                    toolOutput.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+                    toolOutput.Contains("cannot", StringComparison.OrdinalIgnoreCase))
+                {
+                    allMessages.Add(new ChatMessageDto
+                    {
+                        Role = msg.Role.ToString(),
+                        Content = toolOutput
+                    });
+                }
+            }
+            else
+            {
+                allMessages.Add(new ChatMessageDto
+                {
+                    Role = msg.Role.ToString(),
+                    Content = msg.Content ?? string.Empty
+                });
+            }
+        }
+
+        return sqlResult.Content;
+    }
+    #endregion
 }

@@ -38,6 +38,8 @@ public static class Constants
         public const string ConnectionSuccessful = "Errors.ConnectionSuccessful";
         public const string ConnectionFailed = "Errors.ConnectionFailed";
         public const string CannotGenerateDashboardUpdateSchema = "Errors.CannotGenerateDashboardUpdateSchema";
+        public const string GenerateSqlError = "Errors.GenerateSqlError";
+        public const string ExecuteSqlError = "Errors.ExecuteSqlError";
     }
 
     public static class Common
@@ -115,6 +117,7 @@ public static class Constants
         public const string Assets = "Assets";
         public const string Prompts = "Prompts";
         public const string DashboardPrompts = "Dashboard";
+        public const string GenerateSql = "GenerateSql";
         public const string SystemPrompts = "SystemPrompts";
         public const string UserPrompts = "UserPrompts";
     }
@@ -282,5 +285,15 @@ public static class Constants
             public const string Secret = "secret";
             public const string Response = "response";
         }
+    }
+
+    public static class KernelFunctionNames
+    {
+        public const string DefaultQueryGenerator = "default_query_generator";
+    }
+
+    public static class KernelPluginsNames
+    {
+        public const string DefaultPlugin = "DefaultPlugin";
     }
 }

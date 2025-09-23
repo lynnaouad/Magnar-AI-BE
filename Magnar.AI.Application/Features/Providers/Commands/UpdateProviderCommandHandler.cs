@@ -10,27 +10,20 @@ namespace Magnar.AI.Application.Features.Providers.Commands
         #region Members
         private readonly IUnitOfWork unitOfWork;
         private readonly IMapper mapper;
-        private readonly IApiProviderService apiProviderService;
+        private readonly IKernelPluginService kernelPluginService;
         #endregion
 
         #region Constructor
-        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IApiProviderService apiProviderService)
+        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
-            this.apiProviderService = apiProviderService;
+            this.kernelPluginService = kernelPluginService;
         }
         #endregion
 
         public async Task<Result> Handle(UpdateProviderCommand request, CancellationToken cancellationToken)
         {
-            if (request.Model.Type == ProviderTypes.SqlServer && request.Model.Details is not null)
-            {
-                var protectedPassword = unitOfWork.ProviderRepository.ProtectPassword(request.Model.Details.SqlServerConfiguration.Password);
-
-                request.Model.Details.SqlServerConfiguration.Password = protectedPassword;
-            }
-
             var provider = mapper.Map<Provider>(request.Model);
 
             if (provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Any())
@@ -44,9 +37,15 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 })];
             }
 
+            await unitOfWork.BeginTransactionAsync(cancellationToken);
+
+            await RemoveOldDefaultConnection(provider, cancellationToken);
+
             unitOfWork.ProviderRepository.Update(provider);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await unitOfWork.CommitTransactionAsync(cancellationToken);
 
             UpdateRegisteredKernelApis(provider);
 
@@ -68,7 +67,32 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 return;
             }
 
-            apiProviderService.RegisterApis(provider.WorkspaceId, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
+            kernelPluginService.RegisterApiFunctions(provider.WorkspaceId, provider.Id, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
+        }
+
+        public async Task RemoveOldDefaultConnection(Provider provider, CancellationToken cancellationToken)
+        {
+            if (!provider.IsDefault)
+            {
+                return;
+            }
+
+            var existingDefaults = await unitOfWork.ProviderRepository.WhereAsync(x => x.Type == provider.Type
+                            && x.WorkspaceId == provider.WorkspaceId
+                            && x.IsDefault
+                            && x.Id != provider.Id, false, cancellationToken);
+
+            if (existingDefaults.Any())
+            {
+                existingDefaults = [.. existingDefaults.Select(x =>
+                    {
+                        x.IsDefault = false;
+                        return x;
+                    })];
+
+                unitOfWork.ProviderRepository.Update(existingDefaults);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
         }
         #endregion
     }

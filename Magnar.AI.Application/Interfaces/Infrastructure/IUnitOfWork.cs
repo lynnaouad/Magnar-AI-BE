@@ -40,4 +40,6 @@ public interface IUnitOfWork : IAsyncDisposable, IDisposable
     /// </summary>
     /// <returns>A disposable IDbContextTransaction object.</returns>
     Task CommitTransactionAsync(CancellationToken cancellationToken = default);
+
+    Task<List<Dictionary<string, object>>> ExecuteQueryAsync(string sqlQuery, string connectionString, CancellationToken cancellationToken = default);
 }

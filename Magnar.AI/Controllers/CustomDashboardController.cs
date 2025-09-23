@@ -1,5 +1,6 @@
 ﻿using Magnar.AI.Application.Dto.Dashboard;
 using Magnar.AI.Controllers;
+using Magnar.AI.Extensions;
 using Magnar.Recruitment.Application.Features.Dashboard.Commands;
 using Microsoft.AspNetCore.Authorization;
 using System.Threading;
@@ -16,7 +17,7 @@ public class CustomDashboardController : BaseController
     [HttpPost]
     public async Task<IActionResult> GenerateDashboard([FromBody] DashboardPromptDto dto, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new GenerateDashboardCommand(dto), cancellationToken);
+        var result = await Mediator.Send(new GenerateDashboardCommand(dto, HttpContext.GetWorkspaceId()), cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.Errors);

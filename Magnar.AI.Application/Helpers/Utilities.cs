@@ -153,4 +153,34 @@ public static class Utilities
 
         return null;
     }
+
+    public static bool IsSafeSelectQuery(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+        {
+            return false;
+        }
+
+        // Normalize for comparison
+        string upperSql = sql.Trim().ToUpperInvariant();
+
+        // Must start with SELECT
+        if (!upperSql.StartsWith("SELECT"))
+        {
+            return false;
+        }
+
+        // Disallow dangerous commands anywhere
+        string[] forbidden = { "INSERT", "UPDATE", "DELETE", "EXEC", "MERGE", "DROP", "ALTER", "TRUNCATE" };
+
+        foreach (var keyword in forbidden)
+        {
+            if (upperSql.Contains(keyword + " ")) // space prevents matching substrings like 'EXECUTE'
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

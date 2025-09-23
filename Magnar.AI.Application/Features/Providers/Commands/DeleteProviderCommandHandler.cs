@@ -1,4 +1,5 @@
 ﻿using Magnar.AI.Application.Interfaces.Infrastructure;
+using Magnar.AI.Domain.Entities;
 
 namespace Magnar.AI.Application.Features.Providers.Commands
 {
@@ -8,14 +9,14 @@ namespace Magnar.AI.Application.Features.Providers.Commands
     {
         #region Members
         private readonly IUnitOfWork unitOfWork;
-        private readonly IApiProviderService apiProviderService;
+        private readonly IKernelPluginService kernelPluginService;
         #endregion
 
         #region Constructor
-        public DeleteProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IApiProviderService apiProviderService)
+        public DeleteProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService)
         {
             this.unitOfWork = unitOfWork;
-            this.apiProviderService = apiProviderService;
+            this.kernelPluginService = kernelPluginService;
         }
         #endregion
 
@@ -31,20 +32,20 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
-            RemoveKernelApis(provider.WorkspaceId, provider.ApiProviderDetails.FirstOrDefault()?.PluginName ?? string.Empty, provider.Type);
+            RemoveKernelApis(provider.WorkspaceId, provider.ApiProviderDetails.FirstOrDefault()?.PluginName ?? string.Empty, provider.Type, provider.Id);
 
             return Result.CreateSuccess();
         }
 
         #region Private Method
-        public void RemoveKernelApis(int workspaceId, string pluginName, ProviderTypes providerType)
+        public void RemoveKernelApis(int workspaceId, string pluginName, ProviderTypes providerType, int providerId)
         {
             if (providerType != ProviderTypes.API)
             {
                 return;
             }
 
-            apiProviderService.RemovePlugin(workspaceId, pluginName);
+            kernelPluginService.RemoveApiPlugin(workspaceId, providerId, pluginName);
         }
         #endregion
     }

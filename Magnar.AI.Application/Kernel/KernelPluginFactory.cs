@@ -1,34 +1,74 @@
 ﻿using Magnar.AI.Application.Dto.Providers;
-using Microsoft.AspNetCore.Http;
+using Magnar.AI.Application.Features.DatabaseSchema.Commands;
 using Microsoft.SemanticKernel;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
 namespace Magnar.AI.Application.Kernel
 {
+    /// <summary>
+    /// Factory for creating Semantic Kernel plugin functions, either from API providers or a default SQL generator fallback.
+    /// </summary>
     public static class KernelPluginFactory
     {
-        public static KernelFunction CreateFromMethod(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory)
+        /// <summary>
+        /// Creates a Semantic Kernel function that wraps an external API call.
+        /// </summary>
+        /// <param name="api">API provider details (endpoint, method, parameters).</param>
+        /// <param name="authDetails">Authentication details for the API provider.</param>
+        /// <param name="httpClientFactory">Factory for creating HttpClient instances.</param>
+        /// <returns>A KernelFunction that invokes the external API when called.</returns>
+        public static KernelFunction CreateApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory)
         {
             try
             {
                 return KernelFunctionFactory.CreateFromMethod(
-                    (Func<KernelArguments, Task<string>>)(args => ExecuteApiCallAsync(api, authDetails, args, httpClientFactory)),
+                    (Func<KernelArguments, Task<string>>)(args => ExecuteApiFunction(api, authDetails, args, httpClientFactory)),
                        functionName: SanitizeFunctionName(api.FunctionName),
                        description: api.Description,
-                       parameters: BuildParameterViews(api)
+                       parameters: BuildParameters(api)
                    );
             }
-            finally { }
-            ;
+            finally { };
+        }
+
+        /// <summary>
+        /// Creates a fallback Semantic Kernel function that generates and executes
+        /// a SQL query based on the current schema and user prompt.
+        /// </summary>
+        /// <param name="workspaceId">Workspace identifier for schema context.</param>
+        /// <param name="mediator">Mediator instance used to dispatch the SQL generation command.</param>
+        /// <returns>A KernelFunction that produces SQL and executes it when no plugin matches.</returns>
+        public static KernelFunction CreateFallbackSqlFunction(int workspaceId, IMediator mediator)
+        {
+            try
+            {
+                return KernelFunctionFactory.CreateFromMethod(
+                    (Func<KernelArguments, Task<string>>)(args => ExecuteFallbackSqlFunction(workspaceId, args, mediator)),
+                       functionName: Constants.KernelFunctionNames.DefaultQueryGenerator,
+                       description: "Generates and executes a SQL query based on schema and user prompt if no plugin matches.",
+                       parameters:
+                        [
+                            new KernelParameterMetadata("prompt")
+                            {
+                                Description = "User request prompt in plain text",
+                                ParameterType = typeof(string)
+                            }
+                        ]
+                   );
+            }
+            finally { };
         }
 
         #region Private Methods
 
-        private static async Task<string> ExecuteApiCallAsync(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, KernelArguments args, IHttpClientFactory httpClientFactory)
+        /// <summary>
+        /// Executes an API call using the provided API definition, authentication, and arguments.
+        /// Handles query parameters, route parameters, and request body.
+        /// </summary>
+        private static async Task<string> ExecuteApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, KernelArguments args, IHttpClientFactory httpClientFactory)
         {
             try
             {
@@ -78,30 +118,11 @@ namespace Magnar.AI.Application.Kernel
 
                 if (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch)
                 {
-                    string bodyContent;
+                    string bodyContent = "{}";
 
-                    if (!string.IsNullOrWhiteSpace(api.Payload))
+                    if (args.ContainsName("body"))
                     {
-                        try
-                        {
-                            // interpret Payload as schema JSON
-                            var bodyObj = BuildBodyFromSchema(api.Payload, args);
-                            bodyContent = bodyObj.ToString(Formatting.None);
-                        }
-                        catch (Exception)
-                        {
-                            // fallback: raw payload if schema parsing fails
-                            bodyContent = api.Payload;
-                        }
-                    }
-                    else if (args.ContainsName("body"))
-                    {
-                        // let the caller provide the entire JSON body
                         bodyContent = args["body"]?.ToString() ?? "{}";
-                    }
-                    else
-                    {
-                        bodyContent = "{}";
                     }
 
                     request.Content = new StringContent(
@@ -117,7 +138,7 @@ namespace Magnar.AI.Application.Kernel
                     request.Headers.Authorization = authHeader;
                 }
 
-                if(authHeader is null && authDetails.AuthType != AuthType.None)
+                if (authHeader is null && authDetails.AuthType != AuthType.None)
                 {
                     return Constants.Errors.Unauthorized;
                 }
@@ -140,9 +161,27 @@ namespace Magnar.AI.Application.Kernel
         }
 
         /// <summary>
-        /// Generates the function parameter metadata for Semantic Kernel from the API definition
+        /// Executes the fallback SQL assistant: generates a SQL query from a user prompt
+        /// and executes it via the mediator pipeline.
         /// </summary>
-        private static IEnumerable<KernelParameterMetadata> BuildParameterViews(ApiProviderDetails api)
+        private static async Task<string> ExecuteFallbackSqlFunction(int workspaceId, KernelArguments args, IMediator mediator)
+        {
+            var prompt = args["prompt"]?.ToString() ?? string.Empty;
+
+            var result = await mediator.Send(new GenerateAndExecuteSqlQueryCommand(prompt, workspaceId), default);
+            if (!result.Success)
+            {
+                return result.Errors?.FirstOrDefault()?.Message ?? Constants.Errors.GenerateSqlError;
+            }
+
+            return result.Value;
+        }
+
+        /// <summary>
+        /// Generates Semantic Kernel parameter metadata for each API parameter,
+        /// including route, query, and body parameters.
+        /// </summary>
+        private static IEnumerable<KernelParameterMetadata> BuildParameters(ApiProviderDetails api)
         {
             if (!string.IsNullOrWhiteSpace(api.ParametersJson))
             {
@@ -156,7 +195,7 @@ namespace Magnar.AI.Application.Kernel
                 {
                     yield return new KernelParameterMetadata(p.Name)
                     {
-                        Description = $"{p.Description} (This field is: {p.Location.ToString()})",
+                        Description = $"{p.Description} (This field is: {p.Location})",
                         ParameterType = MapToClrType(p.Type),
                         IsRequired = p.Required
                     };
@@ -166,21 +205,18 @@ namespace Magnar.AI.Application.Kernel
             // Body params
             if (!string.IsNullOrWhiteSpace(api.Payload))
             {
-                var schema = JObject.Parse(api.Payload);
-                foreach (var prop in schema.Properties())
+                yield return new KernelParameterMetadata("body")
                 {
-                    yield return new KernelParameterMetadata(prop.Name)
-                    {
-                        Description = $"Body field of type {prop.Value}.",
-                        ParameterType = typeof(string),
-                        IsRequired = true
-                    };
-                }
+                    Description = $"JSON payload for {api.FunctionName}. Schema: {api.Payload}",
+                    ParameterType = typeof(string),
+                    IsRequired = true
+                };
             }
         }
 
         /// <summary>
-        /// Maps an ApiParameterDataType to a CLR System.Type used in KernelParameterMetadata.
+        /// Maps custom API parameter data types to CLR types
+        /// for use in KernelParameterMetadata.
         /// </summary>
         private static Type MapToClrType(ApiParameterDataType type) => type switch
         {
@@ -199,7 +235,8 @@ namespace Magnar.AI.Application.Kernel
         };
 
         /// <summary>
-        /// Cleans up the API function name so it’s valid as a Semantic Kernel function identifier.
+        /// Sanitizes a function name so that it is valid as a Semantic Kernel identifier.
+        /// Invalid characters are replaced with underscores.
         /// </summary>
         private static string SanitizeFunctionName(string name)
         {
@@ -219,167 +256,31 @@ namespace Magnar.AI.Application.Kernel
         }
 
         /// <summary>
-        /// Creates a JSON body (JObject) from a schema definition (schemaJson) and the actual arguments provided
+        /// Resolves an authentication header for the given API provider
+        /// based on its configured authentication type.
         /// </summary>
-        private static JObject BuildBodyFromSchema(string schemaJson, KernelArguments args)
-        {
-            var schema = JObject.Parse(schemaJson);
-            return (JObject)BuildTokenFromSchema(schema, args, parentPath: null);
-        }
-
-        /// <summary>
-        /// Recursively constructs a JSON token (JToken) based on the schema node type.
-        /// If schema node is an object → calls BuildObject.
-        /// If schema node is an array → calls BuildArray.
-        /// If schema node is a primitive → calls BuildValue.
-        /// Provides a generic entry point for schema parsing.
-        /// </summary>
-        private static JToken BuildTokenFromSchema(JToken schema, KernelArguments args, string? parentPath)
-        {
-            return schema switch
-            {
-                JObject obj => BuildObject(obj, args, parentPath),
-                JArray arr => BuildArray(arr, args, parentPath),
-                JValue val => BuildValue(val, args, parentPath),
-                _ => JValue.CreateNull()
-            };
-        }
-
-        /// <summary>
-        /// Builds a JSON object (JObject) by iterating through its properties and populating them with values from KernelArguments.
-        /// </summary>
-        private static JObject BuildObject(JObject schema, KernelArguments args, string? parentPath)
-        {
-            var result = new JObject();
-
-            foreach (var prop in schema.Properties())
-            {
-                var path = string.IsNullOrEmpty(parentPath) ? prop.Name : $"{parentPath}.{prop.Name}";
-                var token = BuildTokenFromSchema(prop.Value, args, path);
-                if (token != null && token.Type != JTokenType.Null)
-                {
-                    result[prop.Name] = token;
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Builds a JSON array (JArray) by repeating the item schema for each index found in KernelArguments.
-        /// Assumes the first element in schema defines the array item type.
-        /// Reads args like items[0], items[1], etc.
-        /// Produces a populated JSON array.
-        /// </summary>
-        private static JArray BuildArray(JArray schema, KernelArguments args, string? parentPath)
-        {
-            var result = new JArray();
-
-            // assume first element defines the type of array items
-            if (schema.Count == 0) return result;
-
-            var itemSchema = schema[0];
-
-            // look for args like "parentPath[0]", "parentPath[1]" ...
-            var index = 0;
-            while (true)
-            {
-                var path = $"{parentPath}[{index}]";
-                if (!args.ContainsName(path)) break;
-
-                var token = BuildTokenFromSchema(itemSchema, args, path);
-                if (token != null && token.Type != JTokenType.Null)
-                {
-                    result.Add(token);
-                }
-
-                index++;
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Builds a primitive JSON value (JValue) from KernelArguments based on the schema type definition.
-        /// Handles optional types (e.g., int?).
-        /// Validates and parses values into proper types: int, double, decimal, bool, Guid, DateTime, DateTimeOffset, string.
-        /// Throws if a required field is missing.
-        /// Returns JValue.CreateNull() for invalid or absent values.
-        /// </summary>
-        private static JToken BuildValue(JValue schemaValue, KernelArguments args, string? path)
-        {
-            var typeDef = schemaValue.ToString();
-            var isOptional = typeDef.EndsWith("?");
-            var baseType = isOptional ? typeDef.TrimEnd('?') : typeDef;
-
-            if (string.IsNullOrEmpty(path))
-            {
-                return JValue.CreateNull();
-            }
-
-            if (!args.ContainsName(path))
-            {
-                if (!isOptional)
-                    throw new ArgumentException($"Missing required field: {path}");
-                return JValue.CreateNull();
-            }
-
-            var raw = args[path]?.ToString();
-            if (raw == null)
-            {
-                return JValue.CreateNull();
-            }
-
-            return baseType.ToLowerInvariant() switch
-            {
-                "int" or "integer" or "number" =>
-                    int.TryParse(raw, out var i) ? JToken.FromObject(i) : JValue.CreateNull(),
-
-                "double" or "float" =>
-                    double.TryParse(raw, out var d) ? JToken.FromObject(d) : JValue.CreateNull(),
-
-                "decimal" =>
-                    decimal.TryParse(raw, out var dec) ? JToken.FromObject(dec) : JValue.CreateNull(),
-
-                "bool" or "boolean" =>
-                    bool.TryParse(raw, out var b) ? JToken.FromObject(b) : JValue.CreateNull(),
-
-                "guid" =>
-                    Guid.TryParse(raw, out var g) ? JToken.FromObject(g) : JValue.CreateNull(),
-
-                "datetime" or "date" =>
-                    DateTime.TryParse(raw, out var dt) ? JToken.FromObject(dt) : JValue.CreateNull(),
-
-                "datetimeoffset" => DateTimeOffset.TryParse(raw, out var dto)
-                    ? JToken.FromObject(dto)
-                    : JValue.CreateNull(),
-
-                "string" =>
-                    JToken.FromObject(raw),
-
-                _ => JToken.FromObject(raw) // fallback
-            };
-        }
-
-        private static async Task<AuthenticationHeaderValue?> GetAuthHeaderAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory, CancellationToken cancellationToken = default)
+        private static async Task<AuthenticationHeaderValue?> GetAuthHeaderAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory)
         {
             try
             {
                 return api.AuthType switch
                 {
                     AuthType.None => null,
-                    AuthType.PasswordCredentials => new AuthenticationHeaderValue("Bearer", await GetPasswordTokenAsync(api, providerId, httpClientFactory, cancellationToken)),
-                    AuthType.ClientCredentials => new AuthenticationHeaderValue("Bearer", await GetClientCredentialsTokenAsync(api, providerId, httpClientFactory, cancellationToken)),
+                    AuthType.PasswordCredentials => new AuthenticationHeaderValue("Bearer", await GetPasswordTokenAsync(api, providerId, httpClientFactory)),
+                    AuthType.ClientCredentials => new AuthenticationHeaderValue("Bearer", await GetClientCredentialsTokenAsync(api, providerId, httpClientFactory)),
                     _ => null,
                 };
             }
             catch (Exception)
             {
                 return null;
-            }     
+            }
         }
 
-        private static async Task<string> GetPasswordTokenAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory, CancellationToken cancellationToken)
+        /// <summary>
+        /// Retrieves an OAuth token using password grant flow for an API provider.
+        /// </summary>
+        private static async Task<string> GetPasswordTokenAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory)
         {
             var client = httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Post, api.TokenUrl!)
@@ -395,16 +296,19 @@ namespace Magnar.AI.Application.Kernel
                 })
             };
 
-            var response = await client.SendAsync(request, cancellationToken);
+            var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
 
             return doc.RootElement.GetProperty("access_token").GetString()!;
         }
 
-        private static async Task<string> GetClientCredentialsTokenAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory, CancellationToken ct)
+        /// <summary>
+        /// Retrieves an OAuth token using client credentials flow for an API provider.
+        /// </summary>
+        private static async Task<string> GetClientCredentialsTokenAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory)
         {
             var client = httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Post, api.TokenUrl!)
@@ -418,10 +322,10 @@ namespace Magnar.AI.Application.Kernel
                 })
             };
 
-            var response = await client.SendAsync(request, ct);
+            var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
 
             return doc.RootElement.GetProperty("access_token").GetString()!;

@@ -1,8 +1,10 @@
-﻿using System.Reflection;
-using Magnar.AI.Application.Behaviors;
+﻿using Magnar.AI.Application.Behaviors;
 using Magnar.AI.Application.Interfaces.Managers;
+using Magnar.AI.Application.Kernel;
 using Magnar.AI.Application.Managers;
+using Magnar.AI.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Magnar.AI.Application;
 
@@ -48,6 +50,9 @@ public static class DependencyInjection
     {
         services.AddScoped<IAIManager, AIManager>();
         services.AddScoped<IDashboardManager, DashboardManager>();
+
+        services.AddSingleton<IKernelPluginManager, KernelPluginManager>();
+        services.AddScoped<IKernelPluginService, KernelPluginService>();
 
         return services;
     }

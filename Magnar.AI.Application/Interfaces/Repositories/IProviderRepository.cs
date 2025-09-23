@@ -9,17 +9,13 @@ public interface IProviderRepository : IRepository<Provider>
 
     IRepository<ApiProviderDetails> ApiProviderDetailsRepository { get; }
 
-    Task<bool> TestSqlProviderAsync(SqlServerProviderDetailsDto details, CancellationToken cancellationToken);
-
-    string BuildSqlServerConnectionString(SqlServerProviderDetailsDto details);
-
-    string ProtectPassword(string password);
-
-    string UnprotectPassword(string protectedPassword);
+    Task<ProviderDto> GetDefaultProviderAsync(int workspaceId, ProviderTypes providerType, CancellationToken cancellationToken);
 
     Task<ProviderDto> GetProviderAsync(int id, CancellationToken cancellationToken);
 
     Task<OdataResponse<ProviderDto>> GetProvidersOdataAsync(ODataQueryOptions<Provider> filterOptions, CancellationToken cancellationToken);
 
-    Task DeleteApiDetailsAsync(int providerId, CancellationToken cancellationToken);
+    Task<bool> TestSqlProviderAsync(SqlServerProviderDetailsDto details, CancellationToken cancellationToken);
+
+    string BuildSqlServerConnectionString(SqlServerProviderDetailsDto details);
 }

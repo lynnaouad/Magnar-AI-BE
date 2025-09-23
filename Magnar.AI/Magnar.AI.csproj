@@ -46,5 +46,14 @@
 	<Content Include="Assets\Prompts\Dashboard\generate-dashboard-sql-user.txt">
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</Content>
+	<Content Include="Assets\Prompts\execute-registered-functions-system.txt">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
+	<Content Include="Assets\Prompts\GenerateSql\generate-sql-system.txt">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
+	<Content Include="Assets\Prompts\GenerateSql\generate-sql-user.txt">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
   </ItemGroup>
 </Project>

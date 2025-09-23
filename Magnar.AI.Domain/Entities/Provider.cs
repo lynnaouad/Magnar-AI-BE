@@ -9,6 +9,8 @@ namespace Magnar.AI.Domain.Entities
 
         public Workspace Workspace { get; set; } = null!;
 
+        public bool IsDefault { get; set; }
+
         public string Name { get; set; } = string.Empty;
 
         public ProviderTypes Type { get; set; }

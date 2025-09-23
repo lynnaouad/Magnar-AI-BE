@@ -1,7 +1,10 @@
-﻿using Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Magnar.AI.Application.Helpers;
+using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using System.Data;
+using System.Data.SqlClient;
 
 namespace Magnar.AI.Infrastructure.Persistence;
 
@@ -10,6 +13,7 @@ public class UnitOfWork : IUnitOfWork
     private readonly MagnarAIDbContext dbContext;
     private readonly IServiceProvider serviceProvider;
     private bool disposed = false;
+
     private IDbContextTransaction transaction = null;
 
     public UnitOfWork(MagnarAIDbContext context, IServiceProvider serviceProvider)
@@ -63,6 +67,38 @@ public class UnitOfWork : IUnitOfWork
                 await transaction.RollbackAsync(cancellationToken);
             }
         }
+    }
+
+    public async Task<List<Dictionary<string, object>>> ExecuteQueryAsync(string sqlQuery, string connectionString, CancellationToken cancellationToken = default)
+    {
+        if (!Utilities.IsSafeSelectQuery(sqlQuery))
+        {
+            throw new InvalidOperationException("Only SELECT queries are allowed");
+        }
+
+        var rows = new List<Dictionary<string, object>>();
+
+        await using var conn = new SqlConnection(connectionString);
+        await conn.OpenAsync(cancellationToken);
+
+        await using var cmd = new SqlCommand(sqlQuery, conn)
+        {
+            CommandType = CommandType.Text,
+            CommandTimeout = 30
+        };
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+            }
+            rows.Add(row);
+        }
+
+        return rows;
     }
 
     public void Dispose()

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Models.Responses;
+using Magnar.AI.Domain.Entities;
 using Magnar.AI.Domain.Static;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
 using Microsoft.AspNetCore.DataProtection;
@@ -30,6 +31,17 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
 
     public IRepository<ApiProviderDetails> ApiProviderDetailsRepository => apiProviderDetailsRepository;
 
+    public async Task<ProviderDto> GetDefaultProviderAsync(int workspaceId, ProviderTypes providerType, CancellationToken cancellationToken)
+    {
+        var provider = await context.Set<Provider>().FirstOrDefaultAsync(x => x.WorkspaceId == workspaceId && x.IsDefault && x.Type == providerType, cancellationToken: cancellationToken);
+        if (provider is null)
+        {
+            return null;
+        }
+
+        return mapper.Map<ProviderDto>(provider);
+    }
+
     public async Task<ProviderDto> GetProviderAsync(int id, CancellationToken cancellationToken)
     {
         var provider = await context.Set<Provider>().FirstOrDefaultAsync(x => x.Id == id, cancellationToken: cancellationToken);
@@ -44,11 +56,6 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
         {
             case ProviderTypes.SqlServer:
                 {
-                    if(mappedProvider.Details?.SqlServerConfiguration is not null)
-                    {
-                        mappedProvider.Details.SqlServerConfiguration.Password = UnprotectPassword(mappedProvider.Details.SqlServerConfiguration.Password);
-                    }
-
                     break;
                 }
 
@@ -120,18 +127,6 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
         };
 
         return builder.ConnectionString;
-    }
-
-    public async Task DeleteApiDetailsAsync(int providerId, CancellationToken cancellationToken)
-    {
-        var existing = await context.Set<ApiProviderDetails>()
-            .Where(x => x.ProviderId == providerId)
-            .ToListAsync(cancellationToken);
-
-        if (existing.Count != 0)
-        {
-            context.Set<ApiProviderDetails>().RemoveRange(existing);
-        }
     }
 
     public string ProtectPassword(string password)

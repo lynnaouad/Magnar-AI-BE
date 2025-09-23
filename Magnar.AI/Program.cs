@@ -6,6 +6,7 @@ using Magnar.AI;
 using Magnar.AI.Application;
 using Magnar.AI.Application.Dashboards;
 using Magnar.AI.Application.Dto.Providers;
+using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Interfaces.Repositories;
 using Magnar.AI.Application.Interfaces.Services;
 using Magnar.AI.Application.Kernel;
@@ -66,9 +67,6 @@ public partial class Program
 
         builder.Services.AddWebServices(builder.Configuration, builder.Environment, builder.Host);
 
-        builder.Services.AddSingleton<WorkspacePluginManager>();
-        builder.Services.AddScoped<IApiProviderService, ApiProviderService>();
-
         // Register DevExpress dashboard services
         builder.Services.AddSingleton<UserScopedDashboardStorage>();
 
@@ -98,7 +96,7 @@ public partial class Program
         // On startup, rebuild all workspace kernels
         using (var scope = app.Services.CreateScope())
         {
-            var manager = scope.ServiceProvider.GetRequiredService<WorkspacePluginManager>();
+            var manager = scope.ServiceProvider.GetRequiredService<IKernelPluginManager>();
             var providerRepository = scope.ServiceProvider.GetRequiredService<IProviderRepository>();
             var workspaceRepository = scope.ServiceProvider.GetRequiredService<IRepository<Workspace>>();
             var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
@@ -120,10 +118,8 @@ public partial class Program
                         continue;
                     }
                    
-                    manager.RebuildKernel(workspaceId, functions, mapped.Details.ApiProviderAuthDetails);
+                    manager.RebuildKernel(workspaceId, provider.Id, functions, mapped.Details.ApiProviderAuthDetails);
                 }
-
-                var test = manager.GetFunctionsWithDetails(workspaceId);
             }
         }
 

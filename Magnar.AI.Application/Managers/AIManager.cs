@@ -5,6 +5,7 @@ using Magnar.AI.Application.Models.Responses.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Serilog;
 using Error = Magnar.AI.Application.Models.Error;
 
@@ -83,7 +84,7 @@ public class AIManager : IAIManager
         return result.Content;
     }
 
-    public async Task<ChatCompletionResponse> GetChatCompletionAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default)
+    public async Task<ChatCompletionResponse> GetChatCompletionAsync(ChatHistory chatHistory, OpenAIPromptExecutionSettings? executionSettings = null, Microsoft.SemanticKernel.Kernel? kernel = null, CancellationToken cancellationToken = default)
     {
         var validateResult = ValidateOpenAIConfiguration();
         if (validateResult is not null)
@@ -91,7 +92,11 @@ public class AIManager : IAIManager
             return new ChatCompletionResponse() { Success = false, Error = new Error(validateResult) };
         }
 
-        var result = await chatClient.GetChatMessageContentAsync(chatHistory, cancellationToken: cancellationToken);
+        executionSettings ??= new OpenAIPromptExecutionSettings();
+
+        var result = kernel is not null 
+            ? await chatClient.GetChatMessageContentAsync(chatHistory, executionSettings: executionSettings, kernel: kernel, cancellationToken: cancellationToken)
+            : await chatClient.GetChatMessageContentAsync(chatHistory, executionSettings: executionSettings, cancellationToken: cancellationToken);
 
         return new ChatCompletionResponse() { Success = true, Content = result?.Content ?? string.Empty };
     }

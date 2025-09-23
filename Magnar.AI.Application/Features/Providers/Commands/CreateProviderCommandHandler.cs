@@ -1,5 +1,7 @@
 ﻿using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
+using Magnar.AI.Domain.Entities;
+using System.Threading;
 
 namespace Magnar.AI.Application.Features.Providers.Commands
 {
@@ -8,32 +10,27 @@ namespace Magnar.AI.Application.Features.Providers.Commands
     public class CreateProviderCommandHandler : IRequestHandler<CreateProviderCommand, Result<int>>
     {
         #region Members
-        private readonly IApiProviderService apiProviderService;
+        private readonly IKernelPluginService kernelPluginService;
         private readonly IUnitOfWork unitOfWork;
         private readonly IMapper mapper;
         #endregion
 
         #region Constructor
-        public CreateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IApiProviderService apiProviderService)
+        public CreateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
-            this.apiProviderService = apiProviderService;
+            this.kernelPluginService = kernelPluginService;
         }
         #endregion
 
         public async Task<Result<int>> Handle(CreateProviderCommand request, CancellationToken cancellationToken)
         {
-            if (request.Model.Type == ProviderTypes.SqlServer && request.Model.Details is not null)
-            {
-                request.Model.Details.SqlServerConfiguration.Password = unitOfWork.ProviderRepository.ProtectPassword(request.Model.Details.SqlServerConfiguration.Password);
-            }
-
             request.Model.WorkspaceId = request.WorkspaceId;
 
             var provider = mapper.Map<Provider>(request.Model);
 
-            if(provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Any())
+            if (provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Count != 0)
             {
                 provider.ApiProviderDetails = [.. provider.ApiProviderDetails.Select(x =>
                 {
@@ -44,9 +41,15 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 })];
             }
 
+            await unitOfWork.BeginTransactionAsync(cancellationToken);
+
+            await RemoveOldDefaultConnection(provider, cancellationToken);
+
             await unitOfWork.ProviderRepository.CreateAsync(provider, cancellationToken);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await unitOfWork.CommitTransactionAsync(cancellationToken);
 
             RegisterKernelApis(provider);
 
@@ -68,9 +71,32 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 return;
             }
 
-            apiProviderService.RegisterApis(provider.WorkspaceId, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
+            kernelPluginService.RegisterApiFunctions(provider.WorkspaceId, provider.Id, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
         }
 
+        public async Task RemoveOldDefaultConnection(Provider provider, CancellationToken cancellationToken)
+        {
+            if (!provider.IsDefault)
+            {
+                return;
+            }
+
+            var existingDefaults = await unitOfWork.ProviderRepository.WhereAsync(x => x.Type == provider.Type
+                            && x.WorkspaceId == provider.WorkspaceId
+                            && x.IsDefault, false, cancellationToken);
+
+            if (existingDefaults.Any())
+            {
+                existingDefaults = [.. existingDefaults.Select(x =>
+                    {
+                        x.IsDefault = false;
+                        return x;
+                    })];
+
+                unitOfWork.ProviderRepository.Update(existingDefaults);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+        }
         #endregion
     }
 }
