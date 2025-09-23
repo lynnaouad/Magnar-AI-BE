@@ -38,7 +38,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             var sqlConnection = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.SqlServer, cancellationToken);
             if (sqlConnection is null)
             {
-                return Result<string>.CreateFailure([new("No default database schema configured!")]);
+                return Result<string>.CreateSuccess("Failed! No default database provider configured!");
             }
 
             // Perform vector search to retrieve tables schema
@@ -47,7 +47,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             VectorSearchResponse<DatabaseSchemaEmbedding> response = await vectorStore.VectorSearchAsync(request.Prompt, 10, options, cancellationToken);
             if (!response.Success || response.SearchResults is null || !response.SearchResults.Any())
             {
-                return Result<string>.CreateFailure([new("An error occured while doing a vector search on the available tables")]);
+                return Result<string>.CreateSuccess("Failed! An error occured while doing a vector search on the available tables");
             }
 
             // Load assistant messages
@@ -69,24 +69,24 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             catch (Exception ex)
             {
                 Log.Error(ex, ex.Message);
-                return Result<string>.CreateFailure([new("An error ocured while deserializing the ai response")]);
+                return Result<string>.CreateSuccess("Failed! An error ocured while deserializing the ai response");
             }
 
             if (!result.Success)
             {
-                return Result<string>.CreateFailure([new("Failed to generate sql query! Kindly check your configured database schema.")]);
+                return Result<string>.CreateSuccess("Failed! Cannot to generate sql query! Kindly check your configured database schema.");
             }
 
             if (!Utilities.IsSafeSelectQuery(result.Sql))
             {
-                return Result<string>.CreateFailure([new("Cannot execute this query! It is not safe!")]);
+                return Result<string>.CreateSuccess("Failed! Cannot execute this query! It is not safe!");
             }
 
             var connectionString = unitOfWork.ProviderRepository.BuildSqlServerConnectionString(sqlConnection.Details.SqlServerConfiguration);
 
             try
             {
-                var rows = await unitOfWork.ExecuteQueryAsync(result.Sql, connectionString);
+                var rows = await unitOfWork.ExecuteQueryAsync(result.Sql, connectionString, cancellationToken);
 
                 var json = JsonSerializer.Serialize(rows);
 
@@ -96,7 +96,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             catch(Exception ex)
             {
                 Log.Error(ex, ex.Message);
-                return Result<string>.CreateFailure([new("An error occured while executing the query!")]);
+                return Result<string>.CreateSuccess("Failed! An error occured while executing the query!");
             }
         }
 

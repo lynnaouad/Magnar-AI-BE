@@ -169,10 +169,6 @@ namespace Magnar.AI.Application.Kernel
             var prompt = args["prompt"]?.ToString() ?? string.Empty;
 
             var result = await mediator.Send(new GenerateAndExecuteSqlQueryCommand(prompt, workspaceId), default);
-            if (!result.Success)
-            {
-                return result.Errors?.FirstOrDefault()?.Message ?? Constants.Errors.GenerateSqlError;
-            }
 
             return result.Value;
         }
