@@ -1,5 +1,6 @@
 ﻿using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
+using Microsoft.AspNetCore.Http;
 
 namespace Magnar.AI.Application.Features.Providers.Commands
 {
@@ -12,24 +13,26 @@ namespace Magnar.AI.Application.Features.Providers.Commands
         private readonly IMapper mapper;
         private readonly ICurrentUserService currentUserService;
         private readonly IKernelPluginService kernelPluginService;
+        private readonly IAuthorizationService authorizationService;
         #endregion
 
         #region Constructor
-        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService, ICurrentUserService currentUserService)
+        public UpdateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService, ICurrentUserService currentUserService, IAuthorizationService authorizationService)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
             this.kernelPluginService = kernelPluginService;
             this.currentUserService = currentUserService;
+            this.authorizationService = authorizationService;
         }
         #endregion
 
         public async Task<Result> Handle(UpdateProviderCommand request, CancellationToken cancellationToken)
         {
-            var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == currentUserService.GetUsername() && x.Id == request.Model.WorkspaceId, false, cancellationToken);
-            if (canAccessWorkspace is null)
+            var canAccessWorkspace = await authorizationService.CanAccessWorkspace(request.Model.WorkspaceId, cancellationToken);
+            if (!canAccessWorkspace)
             {
-                return Result<int>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+                return Result.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
             }
 
             var provider = mapper.Map<Provider>(request.Model);

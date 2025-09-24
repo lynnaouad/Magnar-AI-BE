@@ -29,13 +29,13 @@ public sealed class AccountsController : BaseController
     [ProducesResponseType(typeof(Error[]), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetAccessToken([FromBody] UserCredentials userCredentials, CancellationToken cancellationToken)
     {
-        Result<AuthenticateResponse> res = await Mediator.Send(new GetAccessTokenQuery(userCredentials), cancellationToken);
-        if (!res.Success)
+        Result<AuthenticateResponse> result = await Mediator.Send(new GetAccessTokenQuery(userCredentials), cancellationToken);
+        if (!result.Success)
         {
-            return BadRequest(res.Errors);
+            return StatusCode(result.StatusCode, result.Errors);
         }
 
-        return Ok(res.Value);
+        return Ok(result.Value);
     }
 
     /// <summary>
@@ -50,13 +50,13 @@ public sealed class AccountsController : BaseController
     [ProducesResponseType(typeof(Error[]), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RefreshAccessToken([FromBody] UserCredentials userCredentials, CancellationToken cancellationToken)
     {
-        Result<AuthenticateResponse> res = await Mediator.Send(new RefreshAccessTokenQuery(userCredentials), cancellationToken);
-        if (!res.Success)
+        Result<AuthenticateResponse> result = await Mediator.Send(new RefreshAccessTokenQuery(userCredentials), cancellationToken);
+        if (!result.Success)
         {
-            return BadRequest(res.Errors);
+            return StatusCode(result.StatusCode, result.Errors);
         }
 
-        return Ok(res.Value);
+        return Ok(result.Value);
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ public sealed class AccountsController : BaseController
         Result<ApplicationUserDto> result = await Mediator.Send(new GetUserQuery(userId), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+            return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
@@ -97,7 +97,7 @@ public sealed class AccountsController : BaseController
         var result = await Mediator.Send(new CreateUserCommand(info), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return CreatedAtAction(nameof(GetUser), new { userId = result.Value }, result.Value);
@@ -119,7 +119,7 @@ public sealed class AccountsController : BaseController
         Result result = await Mediator.Send(new RecoverPasswordCommand(email), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -142,7 +142,7 @@ public sealed class AccountsController : BaseController
         Result result = await Mediator.Send(new ResetPasswordCommand(userId, info), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -165,7 +165,7 @@ public sealed class AccountsController : BaseController
         Result result = await Mediator.Send(new SendConfirmationEmailCommand(userId), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -188,7 +188,7 @@ public sealed class AccountsController : BaseController
         Result result = await Mediator.Send(new ConfirmEmailCommand(userId, info), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();

@@ -2,6 +2,7 @@
 using Magnar.AI.Application.Dto.Dashboard;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
+using Microsoft.AspNetCore.Http;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
@@ -13,6 +14,7 @@ public class ChangeDashboardTypeCommandHandler : IRequestHandler<ChangeDashboard
     private readonly IDashboardManager dashboardManager;
     private readonly IUnitOfWork unitOfWork;
     private readonly ICurrentUserService currentUserService;
+    private readonly IAuthorizationService authorizationService;
     #endregion
 
     #region Constructor
@@ -20,22 +22,22 @@ public class ChangeDashboardTypeCommandHandler : IRequestHandler<ChangeDashboard
     public ChangeDashboardTypeCommandHandler(
         IDashboardManager dashboardManager,
         ICurrentUserService currentUserService,
+        IAuthorizationService authorizationService,
         IUnitOfWork unitOfWork)
     {
         this.dashboardManager = dashboardManager;
         this.unitOfWork = unitOfWork;
         this.currentUserService = currentUserService;
+        this.authorizationService = authorizationService;
     }
     #endregion
 
     public async Task<Result<string>> Handle(ChangeDashboardTypeCommand request, CancellationToken cancellationToken)
     {
-        var username = currentUserService.GetUsername();
-
-        var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == request.Parameters.WorkspaceId, false, cancellationToken);
-        if (canAccessWorkspace is null)
+        var canAccessWorkspace = await authorizationService.CanAccessWorkspace(request.Parameters.WorkspaceId, cancellationToken);
+        if (!canAccessWorkspace )
         {
-            return Result<string>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+            return Result<string>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
         }
 
         var dashboardId = dashboardManager.GetLastDashboardKey(request.Parameters.WorkspaceId);

@@ -80,8 +80,8 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
                 new("sub", $"spn:ak_{validatedKey.PublicId}"),        
                 new("api_key_id", validatedKey.PublicId),            
                 new("username", user.UserName),                       
-                new("email", user.Email),                             
-                new("owner_sub", validatedKey.OwnerUserId.ToString()), 
+                new("email", user.Email),                     
+                new(ClaimTypes.NameIdentifier, validatedKey.OwnerUserId.ToString()), 
                 new("tenant_id", validatedKey.TenantId),              
                 new("auth_origin", Constants.IdentityApi.Clients.Api.GrantTypes.ApiKey)
             };

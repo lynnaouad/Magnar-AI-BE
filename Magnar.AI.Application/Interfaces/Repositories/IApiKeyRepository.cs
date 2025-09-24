@@ -6,7 +6,5 @@ public interface IApiKeyRepository : IRepository<ApiKey>
 
     Task<ApiKey> ValidateAsync(string fullKey, bool updateLastUsed = true);
 
-    Task<List<ApiKey>> ListAsync(int ownerUserId, string tenantId);
-
     Task<bool> RevokeAsync(string publicId, int ownerUserId, string tenantId, CancellationToken cancellationToken);
 }

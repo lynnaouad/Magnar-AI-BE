@@ -79,7 +79,7 @@ public class ApiKeyGrantValidator : IExtensionGrantValidator
             new("api_key_id", apiKey.PublicId),
             new("username", user.UserName),
             new("email", user.Email),
-            new("owner_sub", apiKey.OwnerUserId.ToString()),
+            new(ClaimTypes.NameIdentifier, apiKey.OwnerUserId.ToString()),
             new("tenant_id", apiKey.TenantId),
             new("auth_origin", Constants.IdentityApi.Clients.Api.GrantTypes.ApiKey)
         };

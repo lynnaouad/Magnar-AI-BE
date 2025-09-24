@@ -1,7 +1,7 @@
-using DocumentFormat.OpenXml.InkML;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using System;
+using System.Linq;
 
 namespace Magnar.AI.Authentication
 {
@@ -9,13 +9,9 @@ namespace Magnar.AI.Authentication
     {
         public static string SelectScheme(IHeaderDictionary headers)
         {
-            var test = headers.Authorization;
-
-            if (headers.TryGetValue("Authorization", out var values))
+            var authHeader = headers.Authorization.FirstOrDefault();
+            if (authHeader is not null)
             {
-                var authHeader = values.ToString();
-
-                // Your convention: API keys start with "ak_"
                 if (authHeader.StartsWith("ak_", StringComparison.OrdinalIgnoreCase))
                 {
                     return ApiKeyAuthenticationSchemeOptions.DefaultScheme;

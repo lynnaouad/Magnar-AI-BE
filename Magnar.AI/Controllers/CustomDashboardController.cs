@@ -16,7 +16,7 @@ public class CustomDashboardController : BaseController
         var result = await Mediator.Send(new GenerateDashboardCommand(dto), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+            return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(new { dashboardId = result.Value });
@@ -29,7 +29,7 @@ public class CustomDashboardController : BaseController
         var result = await Mediator.Send(new ChangeDashboardTypeCommand(dto), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+            return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(new { dashboardId = result.Value });

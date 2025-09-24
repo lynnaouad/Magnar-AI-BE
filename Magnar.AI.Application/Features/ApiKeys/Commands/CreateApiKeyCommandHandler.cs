@@ -2,7 +2,7 @@
 
 namespace Magnar.AI.Application.Features.ApiKeys.Commands
 {
-    public sealed record CreateApiKeyCommand(CreateApiKeyDto dto) : IRequest<Result<string>>;
+    public sealed record CreateApiKeyCommand(ApiKeyParametersDto Dto) : IRequest<Result<string>>;
 
     public class CreateApiKeyCommandHandler : IRequestHandler<CreateApiKeyCommand, Result<string>>
     {
@@ -22,13 +22,13 @@ namespace Magnar.AI.Application.Features.ApiKeys.Commands
 
         public async Task<Result<string>> Handle(CreateApiKeyCommand request, CancellationToken cancellationToken)
         {
-            var scopes = string.IsNullOrWhiteSpace(request.dto.Scopes) 
+            var scopes = string.IsNullOrWhiteSpace(request.Dto.Scopes) 
                 ? [Constants.IdentityApi.ApiScopeNames.Full, Constants.IdentityApi.ApiScopeNames.Read, Constants.IdentityApi.ApiScopeNames.Modify, Constants.IdentityApi.ApiScopeNames.Write] 
-                : request.dto.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                : request.Dto.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             
-            TimeSpan? lifetime = request.dto.TtlMinutes.HasValue ? TimeSpan.FromMinutes(request.dto.TtlMinutes.Value) : null;
+            TimeSpan? lifetime = request.Dto.TtlMinutes.HasValue ? TimeSpan.FromMinutes(request.Dto.TtlMinutes.Value) : null;
 
-            (string plain, ApiKey entity) = await unitOfWork.ApiKeyRepository.CreateAsync(currentUserService.GetId(), string.Empty, scopes, lifetime, request.dto.Name, request.dto.MetadataJson);
+            (string plain, ApiKey entity) = await unitOfWork.ApiKeyRepository.CreateAsync(currentUserService.GetId(), request.Dto.TenantId, scopes, lifetime, request.Dto.Name, request.Dto.MetadataJson);
            
             return Result<string>.CreateSuccess(plain);
         }

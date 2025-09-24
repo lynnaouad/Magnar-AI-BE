@@ -24,7 +24,9 @@ namespace Magnar.AI.Application.Features.ApiKeys.Queries
 
         public async Task<Result<IEnumerable<ApiKeyDto>>> Handle(GetApiKeysQuery request, CancellationToken cancellationToken)
         {
-            var list = await unitOfWork.ApiKeyRepository.ListAsync(currentUserService.GetId(), string.Empty);
+            var list = (await unitOfWork.ApiKeyRepository
+                .WhereAsync(k => k.OwnerUserId == currentUserService.GetId() && k.RevokedUtc == null, false, cancellationToken))
+                .OrderByDescending(k => k.CreatedUtc);
 
             return Result<IEnumerable<ApiKeyDto>>.CreateSuccess(mapper.Map<IEnumerable<ApiKeyDto>>(list));
         }

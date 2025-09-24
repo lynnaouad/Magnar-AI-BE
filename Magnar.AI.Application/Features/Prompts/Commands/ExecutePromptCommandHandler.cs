@@ -2,6 +2,7 @@
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 
@@ -16,6 +17,7 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
     private readonly IKernelPluginService kernelPluginService;
     private readonly IUnitOfWork unitOfWork;
     private readonly ICurrentUserService currentUserService;
+    private readonly IAuthorizationService authorizationService;
     #endregion
 
     #region Constructor
@@ -24,23 +26,23 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
         IUnitOfWork unitOfWork,
         IAIManager aiManager,
         ICurrentUserService currentUserService,
+        IAuthorizationService authorizationService,
         IKernelPluginService kernelPluginService)
     {
         this.aiManager = aiManager;
         this.kernelPluginService = kernelPluginService;
         this.unitOfWork = unitOfWork;
         this.currentUserService = currentUserService;
+        this.authorizationService = authorizationService;
     }
     #endregion
 
     public async Task<Result<ChatResponseDto>> Handle(ExecutePromptCommand request, CancellationToken cancellationToken)
     {
-        var username = currentUserService.GetUsername();
-
-        var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == request.WorkspaceId, false, cancellationToken);
-        if (canAccessWorkspace is null)
+        var canAccessWorkspace = await authorizationService.CanAccessWorkspace(request.WorkspaceId, cancellationToken);
+        if (!canAccessWorkspace)
         {
-            return Result<ChatResponseDto>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+            return Result<ChatResponseDto>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
         }
 
         var defaultProvider = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.API, cancellationToken);

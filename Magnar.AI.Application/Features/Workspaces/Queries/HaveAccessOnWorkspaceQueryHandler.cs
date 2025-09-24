@@ -8,12 +8,14 @@ namespace Magnar.AI.Application.Features.Providers.Queries
     {
         #region Members
         private readonly IUnitOfWork unitOfWork;
+        private readonly IAuthorizationService authorizationService;
         #endregion
 
         #region Constructor
-        public HaveAccessOnWorkspaceQueryHandler(IUnitOfWork unitOfWork)
+        public HaveAccessOnWorkspaceQueryHandler(IUnitOfWork unitOfWork, IAuthorizationService authorizationService)
         {
             this.unitOfWork = unitOfWork;
+            this.authorizationService = authorizationService;
         }
         #endregion
 
@@ -24,9 +26,9 @@ namespace Magnar.AI.Application.Features.Providers.Queries
                 return Result<bool>.CreateSuccess(false);
             }
 
-            var workspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == request.Username && x.Id == request.Id);
+            var canAccessWorkspace = await authorizationService.CanAccessWorkspace(request.Id, cancellationToken);
 
-            return Result<bool>.CreateSuccess(workspace is not null);
+            return Result<bool>.CreateSuccess(canAccessWorkspace);
         }
     }
 }

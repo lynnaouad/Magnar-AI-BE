@@ -3,6 +3,7 @@ using Magnar.AI.Application.Dto.Schema;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Domain.Entities.Vectors;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
@@ -19,6 +20,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
         private readonly IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore;
         private readonly VectorConfiguration vectoronfiguration;
         private readonly ICurrentUserService currentUserService;
+        private readonly IAuthorizationService authorizationService;
         #endregion
 
         #region Constructor
@@ -28,6 +30,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore,
             IOptions<VectorConfiguration> vectoronfiguration,
             ICurrentUserService currentUserService,
+            IAuthorizationService authorizationService,
             ISchemaManager schemaManager)
         {
             this.unitOfWork = unitOfWork;
@@ -36,23 +39,22 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             this.vectorStore = vectorStore;
             this.vectoronfiguration = vectoronfiguration.Value;
             this.currentUserService = currentUserService;
+            this.authorizationService = authorizationService;
         }
         #endregion
 
         public async Task<Result> Handle(AnnotateDatabaseSchemaCommand request, CancellationToken cancellationToken)
         {
-            var username = currentUserService.GetUsername();
-
             var provider = await unitOfWork.ProviderRepository.GetAsync(request.ProviderId, false, cancellationToken);
             if (provider is null)
             {
                 return Result.CreateFailure([new(Constants.Errors.NotFound)]);
             }
 
-            var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == provider.WorkspaceId, false, cancellationToken);
-            if (canAccessWorkspace is null)
+            var canAccessWorkspace = await authorizationService.CanAccessWorkspace(provider.WorkspaceId, cancellationToken);
+            if (!canAccessWorkspace)
             {
-                return Result.CreateFailure([new(Constants.Errors.Unauthorized)]);
+                return Result.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
             }
 
             await schemaManager.UpsertFileAsync(request.SelectedTables, provider.WorkspaceId, request.ProviderId, cancellationToken);

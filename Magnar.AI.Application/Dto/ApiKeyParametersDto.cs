@@ -1,6 +1,6 @@
 ﻿namespace Magnar.AI.Application.Dto
 {
-    public class CreateApiKeyDto
+    public class ApiKeyParametersDto
     {
         public string? Name { get; set; }
 

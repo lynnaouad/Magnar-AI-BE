@@ -1,7 +1,7 @@
 ﻿using Magnar.AI.Application.Dto.Schema;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
-using Magnar.AI.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
 {
@@ -13,31 +13,31 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
         private readonly IUnitOfWork unitOfWork;
         private readonly ISchemaManager schemaManager;
         private readonly ICurrentUserService currentUserService;
+        private readonly IAuthorizationService authorizationService;
         #endregion
 
         #region Constructor
-        public GetSelectedTablesQueryHandler( IUnitOfWork unitOfWork, ISchemaManager schemaManager, ICurrentUserService currentUserService)
+        public GetSelectedTablesQueryHandler( IUnitOfWork unitOfWork, ISchemaManager schemaManager, ICurrentUserService currentUserService, IAuthorizationService authorizationService)
         {
             this.unitOfWork = unitOfWork;
             this.schemaManager = schemaManager;
             this.currentUserService = currentUserService;
+            this.authorizationService = authorizationService;
         }
         #endregion
 
         public async Task<Result<IEnumerable<TableDto>>> Handle(GetSelectedTablesQuery request, CancellationToken cancellationToken)
         {
-            var username = currentUserService.GetUsername();
-
             var provider = await unitOfWork.ProviderRepository.GetAsync(request.ProviderId, false, cancellationToken);
             if(provider is null)
             {
                 return Result<IEnumerable<TableDto>>.CreateFailure([new(Constants.Errors.NotFound)]);
             }
 
-            var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == provider.WorkspaceId, false, cancellationToken);
-            if (canAccessWorkspace is null)
+            var canAccessWorkspace = await authorizationService.CanAccessWorkspace(provider.WorkspaceId, cancellationToken);
+            if (!canAccessWorkspace)
             {
-                return Result<IEnumerable<TableDto>>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+                return Result<IEnumerable<TableDto>>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
             }
 
             await schemaManager.RemoveMissingTablesAsync(provider.WorkspaceId, request.ProviderId, cancellationToken);

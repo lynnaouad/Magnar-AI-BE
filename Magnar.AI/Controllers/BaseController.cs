@@ -7,7 +7,6 @@ namespace Magnar.AI.Controllers;
 
 [Authorize]
 [Route("api/[controller]")]
-[Route($"api/{{{RouteParameters.WorkspaceParameterName}}}/[controller]")]
 [ApiController]
 [Produces(MediaTypeNames.Application.Json)]
 public abstract class BaseController : ControllerBase

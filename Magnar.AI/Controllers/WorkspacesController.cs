@@ -18,7 +18,7 @@ public class WorkspacesController : BaseController
         var result = await Mediator.Send(new GetWorkspacesQuery(), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
@@ -30,7 +30,7 @@ public class WorkspacesController : BaseController
         var result = await Mediator.Send(new CreateWorkspaceCommand(workspace), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -42,7 +42,7 @@ public class WorkspacesController : BaseController
         var result = await Mediator.Send(new UpdateWorkspaceCommand(workspace), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -55,7 +55,7 @@ public class WorkspacesController : BaseController
         var result = await Mediator.Send(new DeleteWorkspaceCommand(id), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -68,7 +68,7 @@ public class WorkspacesController : BaseController
         var result = await Mediator.Send(new HaveAccessOnWorkspaceQuery(id, Username), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);

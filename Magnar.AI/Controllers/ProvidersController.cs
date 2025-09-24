@@ -21,7 +21,7 @@ public class ProvidersController : BaseController
         var result = await Mediator.Send(new GetProviderQuery(id), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+            return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
@@ -34,7 +34,7 @@ public class ProvidersController : BaseController
         var result = await Mediator.Send(new GetProvidersOdataQuery(workspaceId, filterOptions), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
@@ -46,7 +46,7 @@ public class ProvidersController : BaseController
         var result = await Mediator.Send(new CreateProviderCommand(provider), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
@@ -58,7 +58,7 @@ public class ProvidersController : BaseController
         var result = await Mediator.Send(new UpdateProviderCommand(provider), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -71,7 +71,7 @@ public class ProvidersController : BaseController
         var result = await Mediator.Send(new DeleteProviderCommand(id), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
@@ -84,7 +84,7 @@ public class ProvidersController : BaseController
         var result = await Mediator.Send(new TestProviderCommand(provider), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);

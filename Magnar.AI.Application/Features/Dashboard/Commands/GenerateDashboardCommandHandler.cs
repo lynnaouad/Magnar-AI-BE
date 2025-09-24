@@ -4,7 +4,9 @@ using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Models.Responses.VectorSearch;
+using Magnar.AI.Application.Services;
 using Magnar.AI.Domain.Entities.Vectors;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.VectorData;
 using Serilog;
 using System.Text.Json;
@@ -22,15 +24,17 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
     private readonly IAIManager aiManager;
     private readonly IUnitOfWork unitOfWork;
     private readonly ICurrentUserService currentUserService;
+    private readonly IAuthorizationService authorizationService;
     #endregion
 
     #region Constructor
 
-   public GenerateDashboardCommandHandler(
+    public GenerateDashboardCommandHandler(
         IDashboardManager dashboardManager,
         IVectorStoreManager<DatabaseSchemaEmbedding> vectorStore,
         ICurrentUserService currentUserService,
         IAIManager aiManager,
+        IAuthorizationService authorizationService,
         IUnitOfWork unitOfWork)
     {
         this.dashboardManager = dashboardManager;
@@ -38,17 +42,16 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
         this.aiManager = aiManager;
         this.unitOfWork = unitOfWork;
         this.currentUserService = currentUserService;
+        this.authorizationService = authorizationService;
     }
     #endregion
 
     public async Task<Result<string>> Handle(GenerateDashboardCommand request, CancellationToken cancellationToken)
     {
-        var username = currentUserService.GetUsername();
-
-        var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == username && x.Id == request.Parameters.WorkspaceId, false, cancellationToken);
-        if (canAccessWorkspace is null)
+        var canAccessWorkspace = await authorizationService.CanAccessWorkspace(request.Parameters.WorkspaceId, cancellationToken);
+        if (!canAccessWorkspace)
         {
-            return Result<string>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+            return Result<string>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
         }
 
         // Check connection
@@ -108,7 +111,7 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
         // Claen old dashboards from memory
         dashboardManager.RemoveAllForCurrentUser(request.Parameters.WorkspaceId);
 
-        var fullkey = dashboardManager.SaveDashboard(request.Parameters.WorkspaceId, username, dashboardId, xdoc);
+        var fullkey = dashboardManager.SaveDashboard(request.Parameters.WorkspaceId, currentUserService.GetUsername(), dashboardId, xdoc);
 
         return Result<string>.CreateSuccess(fullkey);
     }

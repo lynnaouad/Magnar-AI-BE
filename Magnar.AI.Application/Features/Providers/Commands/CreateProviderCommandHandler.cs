@@ -2,6 +2,7 @@
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Services;
 using Magnar.AI.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 using System.Threading;
 
 namespace Magnar.AI.Application.Features.Providers.Commands
@@ -15,24 +16,26 @@ namespace Magnar.AI.Application.Features.Providers.Commands
         private readonly IUnitOfWork unitOfWork;
         private readonly IMapper mapper;
         private readonly ICurrentUserService currentUserService;
+        private readonly IAuthorizationService authorizationService;
         #endregion
 
         #region Constructor
-        public CreateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService, ICurrentUserService currentUserService)
+        public CreateProviderCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, IKernelPluginService kernelPluginService, ICurrentUserService currentUserService, IAuthorizationService authorizationService)
         {
             this.unitOfWork = unitOfWork;
             this.mapper = mapper;
             this.kernelPluginService = kernelPluginService;
             this.currentUserService = currentUserService;
+            this.authorizationService = authorizationService;
         }
         #endregion
 
         public async Task<Result<int>> Handle(CreateProviderCommand request, CancellationToken cancellationToken)
         {
-            var canAccessWorkspace = await unitOfWork.WorkspaceRepository.FirstOrDefaultAsync(x => x.CreatedBy == currentUserService.GetUsername() && x.Id == request.Model.WorkspaceId, false, cancellationToken);
-            if (canAccessWorkspace is null)
+            var canAccessWorkspace = await authorizationService.CanAccessWorkspace(request.Model.WorkspaceId, cancellationToken);
+            if (!canAccessWorkspace)
             {
-                return Result<int>.CreateFailure([new(Constants.Errors.Unauthorized)]);
+                return Result<int>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
             }
 
             var provider = mapper.Map<Provider>(request.Model);

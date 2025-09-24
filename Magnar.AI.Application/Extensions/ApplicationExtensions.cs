@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using OfficeOpenXml;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -116,7 +117,7 @@ public static class ApplicationExtensions
             return new Error(x.Description);
         });
 
-        return new Result(result.Succeeded, applicationErrors);
+        return new Result(result.Succeeded, applicationErrors, result.Succeeded ? StatusCodes.Status400BadRequest : StatusCodes.Status200OK);
     }
 
     public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> expr1, Expression<Func<T, bool>> expr2)

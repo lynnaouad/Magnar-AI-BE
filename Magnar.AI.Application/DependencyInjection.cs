@@ -48,6 +48,8 @@ public static class DependencyInjection
 
     private static IServiceCollection RegisterApplicationServices(this IServiceCollection services)
     {
+        services.AddScoped<IAuthorizationService, AuthorizationService>();
+
         services.AddScoped<IAIManager, AIManager>();
         services.AddScoped<IDashboardManager, DashboardManager>();
 

@@ -126,6 +126,12 @@ internal static class DependencyInjection
            .ValidateOnStart()
            .ValidateDataAnnotations();
 
+        services
+           .AddOptions<ApiKeysConfiguration>()
+           .BindConfiguration(ApiKeysConfiguration.SectionName)
+           .ValidateOnStart()
+           .ValidateDataAnnotations();
+
         return services;
     }
 

@@ -115,21 +115,6 @@ public class ApiKeyRepository : BaseRepository<ApiKey>, IApiKeyRepository
     }
 
     /// <summary>
-    /// Lists all active (non-revoked) API keys for a given user and tenant.
-    /// 
-    /// - Filters by ownerUserId and tenantId.
-    /// - Excludes revoked keys.
-    /// - Orders results by creation date (newest first).
-    /// </summary>
-    public Task<List<ApiKey>> ListAsync(int ownerUserId, string tenantId)
-    {
-        return context.Set<ApiKey>()
-            .Where(k => k.OwnerUserId == ownerUserId && k.TenantId == tenantId && k.RevokedUtc == null)
-            .OrderByDescending(k => k.CreatedUtc)
-            .ToListAsync();
-    }
-
-    /// <summary>
     /// Revokes an API key by its publicId for a given user and tenant.
     /// 
     /// - Finds the key in the database.

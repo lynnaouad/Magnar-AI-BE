@@ -16,7 +16,7 @@ public class PromptsController : BaseController
         var result = await Mediator.Send(new ExecutePromptCommand(dto, workspaceId), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+            return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);

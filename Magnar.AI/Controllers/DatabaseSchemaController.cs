@@ -2,8 +2,6 @@
 using Magnar.AI.Application.Dto.Schema;
 using Magnar.AI.Application.Features.DatabaseSchema.Commands;
 using Magnar.AI.Application.Features.DatabaseSchema.Queries;
-using Magnar.AI.Extensions;
-using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +20,7 @@ public class DatabaseSchemaController : BaseController
         var result = await Mediator.Send(new GetTablesQuery(provider), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
@@ -34,7 +32,7 @@ public class DatabaseSchemaController : BaseController
         var result = await Mediator.Send(new GetSelectedTablesQuery(providerId), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
@@ -46,7 +44,7 @@ public class DatabaseSchemaController : BaseController
         var result = await Mediator.Send(new AnnotateDatabaseSchemaCommand(selectedTables, providerId), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();

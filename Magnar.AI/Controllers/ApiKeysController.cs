@@ -1,5 +1,7 @@
 using Magnar.AI.Application.Features.ApiKeys.Commands;
 using Magnar.AI.Application.Features.ApiKeys.Queries;
+using Magnar.AI.Domain.Entities;
+using Microsoft.AspNetCore.OData.Query;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,38 +13,63 @@ public class ApiKeysController : BaseController
     {
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateApiKeyDto request, CancellationToken cancellationToken)
-    {
-        var result = await Mediator.Send(new CreateApiKeyCommand(request), cancellationToken);
-        if (!result.Success)
-        {
-            return BadRequest(result.Errors);
-        }
-
-        return Ok(result.Value);
-    }
-
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new GetApiKeysQuery(), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok(result.Value);
     }
 
-    [HttpDelete]
-    [Route("{publicId}")]
-    public async Task<IActionResult> Revoke(string publicId, CancellationToken cancellationToken)
+    [HttpGet]
+    [Route("odata")]
+    public async Task<IActionResult> GetOdata(ODataQueryOptions<ApiKey> filterOptions, CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(new RevokeApiKeyCommand(publicId), cancellationToken);
+        var result = await Mediator.Send(new GetApiKeysOdataQuery(filterOptions), cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(result.Errors);
+             return StatusCode(result.StatusCode, result.Errors);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] ApiKeyParametersDto dto, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new CreateApiKeyCommand(dto), cancellationToken);
+        if (!result.Success)
+        {
+             return StatusCode(result.StatusCode, result.Errors);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpPut]
+    public async Task<IActionResult> Update([FromBody] ApiKeyDto dto, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new UpdateApiKeyCommand(dto), cancellationToken);
+        if (!result.Success)
+        {
+             return StatusCode(result.StatusCode, result.Errors);
+        }
+
+        return Ok();
+    }
+
+    [HttpDelete]
+    [Route("{id}")]
+    public async Task<IActionResult> Revoke([FromRoute]int id, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new RevokeApiKeyCommand(id), cancellationToken);
+        if (!result.Success)
+        {
+             return StatusCode(result.StatusCode, result.Errors);
         }
 
         return Ok();
