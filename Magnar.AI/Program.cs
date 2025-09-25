@@ -103,36 +103,6 @@ public partial class Program
 
         WebApplication app = builder.Build();
 
-        // On startup, rebuild all workspace kernels
-        using (var scope = app.Services.CreateScope())
-        {
-            var manager = scope.ServiceProvider.GetRequiredService<IKernelPluginManager>();
-            var providerRepository = scope.ServiceProvider.GetRequiredService<IProviderRepository>();
-            var workspaceRepository = scope.ServiceProvider.GetRequiredService<IRepository<Workspace>>();
-            var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
-
-            var workspaces = await workspaceRepository.GetAsync();
-            var workspacesIds = workspaces.Select(x => x.Id);
-
-            foreach(var workspaceId in workspacesIds)
-            {
-                var providers = await providerRepository.WhereAsync(x => x.WorkspaceId == workspaceId && x.Type == ProviderTypes.API, false, default);
-
-                foreach(var provider in providers)
-                {
-                    var mapped = mapper.Map<ProviderDto>(provider);
-                    var functions = await providerRepository.ApiProviderDetailsRepository.WhereAsync(x => x.ProviderId == provider.Id, false, default);
-
-                    if (mapped.Details?.ApiProviderAuthDetails is null)
-                    {
-                        continue;
-                    }
-                   
-                    manager.RebuildKernel(workspaceId, provider.Id, functions, mapped.Details.ApiProviderAuthDetails);
-                }
-            }
-        }
-
         /*
          *
          * Configure the HTTP request pipeline.
@@ -152,6 +122,36 @@ public partial class Program
 
         app.UseExceptionHandler();
         await app.InitializeDatabaseAsync();
+
+        // On startup, rebuild all workspace kernels
+        using (var scope = app.Services.CreateScope())
+        {
+            var manager = scope.ServiceProvider.GetRequiredService<IKernelPluginManager>();
+            var providerRepository = scope.ServiceProvider.GetRequiredService<IProviderRepository>();
+            var workspaceRepository = scope.ServiceProvider.GetRequiredService<IRepository<Workspace>>();
+            var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
+
+            var workspaces = await workspaceRepository.GetAsync();
+            var workspacesIds = workspaces.Select(x => x.Id);
+
+            foreach (var workspaceId in workspacesIds)
+            {
+                var providers = await providerRepository.WhereAsync(x => x.WorkspaceId == workspaceId && x.Type == ProviderTypes.API, false, default);
+
+                foreach (var provider in providers)
+                {
+                    var mapped = mapper.Map<ProviderDto>(provider);
+                    var functions = await providerRepository.ApiProviderDetailsRepository.WhereAsync(x => x.ProviderId == provider.Id, false, default);
+
+                    if (mapped.Details?.ApiProviderAuthDetails is null)
+                    {
+                        continue;
+                    }
+
+                    manager.RebuildKernel(workspaceId, provider.Id, functions, mapped.Details.ApiProviderAuthDetails);
+                }
+            }
+        }
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
