@@ -1,7 +1,13 @@
-﻿using Magnar.AI.Application.Dto.Providers;
+﻿using Duende.IdentityServer.Models;
+using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Features.DatabaseSchema.Commands;
+using Magnar.AI.Application.Helpers;
+using Magnar.AI.Application.Interfaces.Infrastructure;
+using Magnar.AI.Domain.Entities;
 using Microsoft.SemanticKernel;
 using Newtonsoft.Json;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -20,12 +26,12 @@ namespace Magnar.AI.Application.Kernel
         /// <param name="authDetails">Authentication details for the API provider.</param>
         /// <param name="httpClientFactory">Factory for creating HttpClient instances.</param>
         /// <returns>A KernelFunction that invokes the external API when called.</returns>
-        public static KernelFunction CreateApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory)
+        public static KernelFunction CreateApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
         {
             try
             {
                 return KernelFunctionFactory.CreateFromMethod(
-                    (Func<KernelArguments, Task<string>>)(args => ExecuteApiFunction(api, authDetails, args, httpClientFactory)),
+                    (Func<KernelArguments, Task<string>>)(args => ExecuteApiFunction(api, authDetails, args, httpClientFactory, cookieStore)),
                        functionName: SanitizeFunctionName(api.FunctionName),
                        description: api.Description,
                        parameters: BuildParameters(api)
@@ -68,84 +74,40 @@ namespace Magnar.AI.Application.Kernel
         /// Executes an API call using the provided API definition, authentication, and arguments.
         /// Handles query parameters, route parameters, and request body.
         /// </summary>
-        private static async Task<string> ExecuteApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, KernelArguments args, IHttpClientFactory httpClientFactory)
+        private static async Task<string> ExecuteApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, KernelArguments args, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
         {
             try
             {
-                var url = api.ApiUrl;
-                var method = new HttpMethod(api.HttpMethod.ToString());
+                var httpClient = authDetails.AuthType == AuthType.CookieSession
+                    ? cookieStore.CreateClientWithCookies(api.ProviderId)
+                    : httpClientFactory.CreateClient();
 
-                // Deserialize parameters (route/query)
-                var parameters = string.IsNullOrWhiteSpace(api.ParametersJson)
-                    ? []
-                    : JsonConvert.DeserializeObject<List<ApiParameterDto>>(api.ParametersJson) ?? new();
+                // build request (first attempt)
+                var request = BuildRequest(api, args);
 
-                var queryParams = new List<string>();
-
-                foreach (var p in parameters)
-                {
-                    if (!args.ContainsName(p.Name))
-                    {
-                        continue;
-                    }
-                    ;
-
-                    var value = args[p.Name]?.ToString();
-
-                    switch (p.Location)
-                    {
-                        case ApiParameterLocation.Route:
-                            // Replace placeholder {Name} in the URL if it exists
-                            if (url.Contains($"{{{p.Name}}}", StringComparison.OrdinalIgnoreCase))
-                            {
-                                url = url.Replace($"{{{p.Name}}}", Uri.EscapeDataString(value ?? ""), StringComparison.OrdinalIgnoreCase);
-                            }
-
-                            break;
-
-                        case ApiParameterLocation.Query:
-                            queryParams.Add($"{p.Name}={Uri.EscapeDataString(value ?? "")}");
-                            break;
-                    }
-                }
-
-                if (queryParams.Count != 0)
-                {
-                    url += (url.Contains('?') ? '&' : '?') + string.Join('&', queryParams);
-                }
-
-                var request = new HttpRequestMessage(method, url);
-
-                if (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch)
-                {
-                    string bodyContent = "{}";
-
-                    if (args.ContainsName("body"))
-                    {
-                        bodyContent = args["body"]?.ToString() ?? "{}";
-                    }
-
-                    request.Content = new StringContent(
-                        bodyContent,
-                        Encoding.UTF8,
-                        "application/json"
-                    );
-                }
-
-                var authHeader = await GetAuthHeaderAsync(authDetails, api.ProviderId, httpClientFactory);
+                // add Authorization header if needed
+                var authHeader = await GetAuthHeaderAsync(authDetails, httpClientFactory);
                 if (authHeader is not null)
                 {
                     request.Headers.Authorization = authHeader;
                 }
 
-                if (authHeader is null && authDetails.AuthType != AuthType.None)
-                {
-                    return Constants.Errors.Unauthorized;
-                }
-
-                var httpClient = httpClientFactory.CreateClient();
-
                 var response = await httpClient.SendAsync(request);
+
+                // Retry if unauthorized and cookie-based
+                if (authDetails.AuthType == AuthType.CookieSession && response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    // Replace expired sessions
+                    cookieStore.Refresh(api.ProviderId);
+                    httpClient = cookieStore.CreateClientWithCookies(api.ProviderId);
+
+                    if (await TryCookieLoginAsync(authDetails, httpClient))
+                    {
+                        // rebuild request for retry
+                        var retryRequest = BuildRequest(api, args);
+                        response = await httpClient.SendAsync(retryRequest);
+                    }
+                }
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -171,6 +133,52 @@ namespace Magnar.AI.Application.Kernel
             var result = await mediator.Send(new GenerateAndExecuteSqlQueryCommand(prompt, workspaceId), default);
 
             return result.Value;
+        }
+
+        private static HttpRequestMessage BuildRequest(ApiProviderDetails api, KernelArguments args)
+        {
+            var url = api.ApiUrl;
+            var method = new HttpMethod(api.HttpMethod.ToString());
+
+            // Route & query params
+            var parameters = string.IsNullOrWhiteSpace(api.ParametersJson)
+                ? []
+                : JsonConvert.DeserializeObject<List<ApiParameterDto>>(api.ParametersJson) ?? new();
+
+            var queryParams = new List<string>();
+
+            foreach (var p in parameters)
+            {
+                if (!args.ContainsName(p.Name)) continue;
+
+                var value = args[p.Name]?.ToString();
+
+                switch (p.Location)
+                {
+                    case ApiParameterLocation.Route:
+                        if (url.Contains($"{{{p.Name}}}", StringComparison.OrdinalIgnoreCase))
+                            url = url.Replace($"{{{p.Name}}}", Uri.EscapeDataString(value ?? ""), StringComparison.OrdinalIgnoreCase);
+                        break;
+
+                    case ApiParameterLocation.Query:
+                        queryParams.Add($"{p.Name}={Uri.EscapeDataString(value ?? "")}");
+                        break;
+                }
+            }
+
+            if (queryParams.Count != 0)
+                url += (url.Contains('?') ? '&' : '?') + string.Join('&', queryParams);
+
+            var request = new HttpRequestMessage(method, url);
+
+            // Body payload
+            if (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch)
+            {
+                var bodyContent = args.ContainsName("body") ? args["body"]?.ToString() ?? "{}" : "{}";
+                request.Content = new StringContent(bodyContent, Encoding.UTF8, "application/json");
+            }
+
+            return request;
         }
 
         /// <summary>
@@ -255,15 +263,16 @@ namespace Magnar.AI.Application.Kernel
         /// Resolves an authentication header for the given API provider
         /// based on its configured authentication type.
         /// </summary>
-        private static async Task<AuthenticationHeaderValue?> GetAuthHeaderAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory)
+        private static async Task<AuthenticationHeaderValue?> GetAuthHeaderAsync(ApiProviderAuthDetailsDto api, IHttpClientFactory httpClientFactory)
         {
             try
             {
                 return api.AuthType switch
                 {
-                    AuthType.None => null,
-                    AuthType.PasswordCredentials => new AuthenticationHeaderValue("Bearer", await GetPasswordTokenAsync(api, providerId, httpClientFactory)),
-                    AuthType.ClientCredentials => new AuthenticationHeaderValue("Bearer", await GetClientCredentialsTokenAsync(api, providerId, httpClientFactory)),
+                    AuthType.NoAuth => null,
+                    AuthType.PasswordCredentials => new AuthenticationHeaderValue("Bearer", await GetPasswordTokenAsync(api, httpClientFactory)),
+                    AuthType.ClientCredentials => new AuthenticationHeaderValue("Bearer", await GetClientCredentialsTokenAsync(api, httpClientFactory)),
+                    AuthType.ApiKey => BuildApiKeyHeader(api),
                     _ => null,
                 };
             }
@@ -276,7 +285,7 @@ namespace Magnar.AI.Application.Kernel
         /// <summary>
         /// Retrieves an OAuth token using password grant flow for an API provider.
         /// </summary>
-        private static async Task<string> GetPasswordTokenAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory)
+        private static async Task<string> GetPasswordTokenAsync(ApiProviderAuthDetailsDto api, IHttpClientFactory httpClientFactory)
         {
             var client = httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Post, api.TokenUrl!)
@@ -304,7 +313,7 @@ namespace Magnar.AI.Application.Kernel
         /// <summary>
         /// Retrieves an OAuth token using client credentials flow for an API provider.
         /// </summary>
-        private static async Task<string> GetClientCredentialsTokenAsync(ApiProviderAuthDetailsDto api, int providerId, IHttpClientFactory httpClientFactory)
+        private static async Task<string> GetClientCredentialsTokenAsync(ApiProviderAuthDetailsDto api, IHttpClientFactory httpClientFactory)
         {
             var client = httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Post, api.TokenUrl!)
@@ -326,6 +335,29 @@ namespace Magnar.AI.Application.Kernel
 
             return doc.RootElement.GetProperty("access_token").GetString()!;
         }
+
+        private static async Task<bool> TryCookieLoginAsync(ApiProviderAuthDetailsDto authDetails, HttpClient httpClient)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, authDetails?.TokenUrl?.TrimEnd('/'))
+            {
+                Content = new StringContent(authDetails?.Payload ?? string.Empty, Encoding.UTF8, "application/json")
+            };
+
+            var response = await httpClient.SendAsync(request);
+
+            return response.IsSuccessStatusCode;
+        }
+
+        private static AuthenticationHeaderValue? BuildApiKeyHeader(ApiProviderAuthDetailsDto api)
+        {
+            if (string.IsNullOrWhiteSpace(api.ApiKeyValue))
+            {
+                return null;
+            }
+               
+            return new AuthenticationHeaderValue(api.ApiKeyName, api.ApiKeyValue);
+        }
+
         #endregion
     }
 }

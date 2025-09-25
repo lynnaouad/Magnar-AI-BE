@@ -24,4 +24,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Magnar.AI.Application\Magnar.AI.Application.csproj" />
   </ItemGroup>
+	
+  <ItemGroup>
+    <Folder Include="CookieSessions\" />
+  </ItemGroup>
 </Project>

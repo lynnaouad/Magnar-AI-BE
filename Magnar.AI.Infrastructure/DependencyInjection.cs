@@ -4,6 +4,7 @@ using Magnar.AI.Infrastructure.Interceptors;
 using Magnar.AI.Infrastructure.Managers;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
 using Magnar.AI.Infrastructure.Repositories;
+using Magnar.AI.Infrastructure.Stores;
 using Magnar.Recruitment.Infrastructure.Managers;
 using Magnar.Recruitment.Infrastructure.Repositories;
 using Magnar.Recruitment.Infrastructure.Services;
@@ -48,6 +49,8 @@ public static class DependencyInjection
 
     private static IServiceCollection RegisterInfrastructureServices(this IServiceCollection services)
     {
+        services.AddSingleton<ICookieSessionStore, CookieSessionStore>();
+
         services.AddScoped<IIdentityRepository, IdentityRepository>();
         services.AddScoped<IProviderRepository, ProviderRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();

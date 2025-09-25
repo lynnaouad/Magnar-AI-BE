@@ -1,4 +1,6 @@
 ﻿using Magnar.AI.Application.Dto.Providers;
+using Magnar.AI.Application.Helpers;
+using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Kernel;
 
@@ -10,14 +12,16 @@ namespace Magnar.AI.Application.Services
         private readonly IKernelPluginManager workspaceManager;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IMediator mediator;
+        private readonly ICookieSessionStore cookieStore;
         #endregion
 
         #region Constructor
-        public KernelPluginService(IKernelPluginManager workspaceManager, IHttpClientFactory httpClientFactory, IMediator mediator)
+        public KernelPluginService(IKernelPluginManager workspaceManager, IHttpClientFactory httpClientFactory, IMediator mediator, ICookieSessionStore cookieStore)
         {
             this.workspaceManager = workspaceManager;
             this.httpClientFactory = httpClientFactory;
             this.mediator = mediator;
+            this.cookieStore = cookieStore;
         }
         #endregion
 
@@ -29,7 +33,7 @@ namespace Magnar.AI.Application.Services
             }
 
             var registry = workspaceManager.GetOrCreateKernel(workspaceId, providerId);
-            registry.RegisterApiPlugins(apis, authDetails, httpClientFactory);
+            registry.RegisterApiPlugins(apis, authDetails, httpClientFactory, cookieStore);
         }
 
         public void RegisterDefaultSqlFunction(int workspaceId)

@@ -59,7 +59,9 @@ public enum HttpMethods
 
 public enum AuthType 
 {
-    None = 1,
+    NoAuth = 1,
     PasswordCredentials,
-    ClientCredentials
+    ClientCredentials,
+    CookieSession,
+    ApiKey
 }

@@ -12,12 +12,13 @@
         public string? ClientSecret { get; set; }
         public string? Scope { get; set; }
 
-        // Password Grant
         public string? Username { get; set; }
         public string? Password { get; set; }
 
         // API Key
         public string? ApiKeyName { get; set; }
         public string? ApiKeyValue { get; set; }
+
+        public string? Payload { get; set; }
     }
 }

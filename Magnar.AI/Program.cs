@@ -6,11 +6,9 @@ using Magnar.AI;
 using Magnar.AI.Application;
 using Magnar.AI.Application.Dashboards;
 using Magnar.AI.Application.Dto.Providers;
+using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Interfaces.Repositories;
-using Magnar.AI.Application.Interfaces.Services;
-using Magnar.AI.Application.Kernel;
-using Magnar.AI.Application.Services;
 using Magnar.AI.Domain.Entities;
 using Magnar.AI.Domain.Static;
 using Magnar.AI.Extensions;
@@ -27,6 +25,8 @@ using Microsoft.SemanticKernel;
 using Serilog;
 using System;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 public partial class Program
@@ -35,7 +35,17 @@ public partial class Program
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddHttpClient();
+        builder.Services.AddHttpClient("cookieClient")
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                return new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
+                    UseCookies = true,
+                    CookieContainer = new CookieContainer()
+                };
+            });
+
 
         // Semantic Kernel + OpenAI
         var openAIConf = builder.Configuration.GetSection("OpenAIConfiguration");

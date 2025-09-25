@@ -12,7 +12,7 @@ namespace Magnar.AI.Infrastructure.Configurations
 
             builder.Property(x => x.IsDefault).IsRequired().HasDefaultValue(false);
 
-            builder.HasIndex(x => new { x.Type, x.IsDefault }).IsUnique().HasFilter("[IsDefault] = 1");
+            builder.HasIndex(x => new { x.Type, x.IsDefault, x.WorkspaceId }).IsUnique().HasFilter("[IsDefault] = 1");
 
             builder.HasOne(x => x.Workspace).WithMany().HasForeignKey(x => x.WorkspaceId).OnDelete(DeleteBehavior.Cascade);
         }
