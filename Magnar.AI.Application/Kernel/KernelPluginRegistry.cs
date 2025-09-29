@@ -1,6 +1,6 @@
 ﻿using Magnar.AI.Application.Dto.Providers;
-using Magnar.AI.Application.Helpers;
-using Magnar.AI.Application.Interfaces.Infrastructure;
+using Magnar.AI.Application.Interfaces.Stores;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 
 namespace Magnar.AI.Application.Kernel
@@ -40,7 +40,7 @@ namespace Magnar.AI.Application.Kernel
         ///   and included in the corresponding plugin.  
         /// - This method allows registering multiple plugins in a single call.
         /// </remarks>
-        public void RegisterApiPlugins(IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
+        public void RegisterApiPlugins(int workspaceId, IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore, IServiceScopeFactory scopeFactory)
         {
             if(apis is null || !apis.Any() || authDetails is null)
             {
@@ -54,7 +54,24 @@ namespace Magnar.AI.Application.Kernel
                 var pluginName = group.Key;
                 var pluginApis = group;
 
-                RegisterPlugin(pluginName, pluginApis, authDetails, httpClientFactory, cookieStore);
+                try
+                {
+                    RemovePlugin(pluginName);
+
+                    List<KernelFunction> functions = [];
+
+                    var defaultFunction = KernelPluginFactory.CreateFallbackSqlFunction(workspaceId, scopeFactory);
+
+                    functions.Add(defaultFunction);
+
+                    foreach (var api in apis)
+                    {
+                        functions.Add(KernelPluginFactory.CreateApiFunction(api, authDetails, httpClientFactory, cookieStore));
+                    }
+
+                    Kernel.Plugins.AddFromFunctions(pluginName, functions);
+                }
+                finally { };
             }
         }
 
@@ -74,48 +91,5 @@ namespace Magnar.AI.Application.Kernel
                 Kernel.Plugins.Remove(plugin);
             }
         }
-
-        /// <summary>
-        /// Registers the default SQL plugin for the specified workspace.
-        /// This plugin generates and executes SQL queries when no other plugin matches.
-        /// </summary>
-        /// <param name="workspaceId">The workspace ID used to scope SQL generation.</param>
-        /// <param name="mediator">Mediator used to handle SQL generation commands.</param>
-        public void RegisterDefaultSqlPlugin(int workspaceId, IMediator mediator)
-        {
-            try
-            {
-                var pluginName = Constants.KernelPluginsNames.DefaultPlugin;
-
-                RemovePlugin(pluginName);
-
-                var function = KernelPluginFactory.CreateFallbackSqlFunction(workspaceId, mediator);
-
-                Kernel.Plugins.AddFromFunctions(pluginName, [function]);
-            }
-            finally { };
-        }
-
-        #region Private Methods
-
-        private void RegisterPlugin(string pluginName, IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
-        {
-            try
-            {
-                RemovePlugin(pluginName);
-
-                List<KernelFunction> functions = [];
-
-                foreach (var api in apis)
-                {
-                    functions.Add(KernelPluginFactory.CreateApiFunction(api, authDetails, httpClientFactory, cookieStore));
-                }
-
-                Kernel.Plugins.AddFromFunctions(pluginName, functions);
-            }
-            finally{ };
-        }
-
-        #endregion
     }
 }

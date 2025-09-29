@@ -1,8 +1,10 @@
 ﻿using Magnar.AI.Application.Behaviors;
 using Magnar.AI.Application.Interfaces.Managers;
+using Magnar.AI.Application.Interfaces.Stores;
 using Magnar.AI.Application.Kernel;
 using Magnar.AI.Application.Managers;
 using Magnar.AI.Application.Services;
+using Magnar.AI.Application.Stores;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -55,6 +57,8 @@ public static class DependencyInjection
 
         services.AddSingleton<IKernelPluginManager, KernelPluginManager>();
         services.AddScoped<IKernelPluginService, KernelPluginService>();
+
+        services.AddScoped<IChatMemoryStore, ChatMemoryStore>();
 
         return services;
     }

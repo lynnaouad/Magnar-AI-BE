@@ -222,6 +222,7 @@ ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME, c.ORDINAL_POSITION;
                             IsNullable = c.IsNullable,
                             IsPrimaryKey = c.IsPrimaryKey,
                             IsForeignKey = c.IsForeignKey,
+                            ForeignKeyReferencedTable = c.ForeignKeyReferencedTable,
                             ColumnDescription = c.ColumnDescription
                         };
                     }

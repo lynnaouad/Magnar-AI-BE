@@ -51,4 +51,14 @@ public interface IAIManager
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ChatCompletionResponse"/> representing the chat completion response, or null if generation fails.</returns>
     Task<ChatCompletionResponse> GetChatCompletionAsync(string systemMessage, string userMessage, CancellationToken cancellationToken = default);
+
+    Task ExecutePrompt(ChatHistory history, OpenAIPromptExecutionSettings? executionSettings = null, Microsoft.SemanticKernel.Kernel? kernel = null, CancellationToken cancellationToken = default);
+
+    IEnumerable<ChatMessageDto> BuildChatMessages(int workspaceId, int userId, ChatHistory history);
+
+    ChatHistory BuildChatHistory(IEnumerable<ChatMessageDto> messages);
+
+    public int GetModelMaxTokenLimit();
+
+    public int CountTokenNumber(string text);
 }

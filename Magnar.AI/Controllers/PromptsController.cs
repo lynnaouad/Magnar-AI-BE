@@ -10,6 +10,18 @@ public class PromptsController : BaseController
     {
     }
 
+    [HttpGet]
+    public async Task<IActionResult> LoadHistory(int workspaceId, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new LoadHistoryQuery(workspaceId), cancellationToken);
+        if (!result.Success)
+        {
+            return StatusCode(result.StatusCode, result.Errors);
+        }
+
+        return Ok(result.Value);
+    }
+
     [HttpPost]
     public async Task<IActionResult> ExecutePrompt([FromBody] PromptDto dto, [FromQuery] int workspaceId, CancellationToken cancellationToken)
     {

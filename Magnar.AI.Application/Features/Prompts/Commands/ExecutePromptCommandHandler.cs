@@ -2,15 +2,19 @@
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
+using Magnar.AI.Application.Interfaces.Stores;
+using Magnar.AI.Application.Stores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Memory;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
-public sealed record ExecutePromptCommand(PromptDto Parameters, int WorkspaceId) : IRequest<Result<ChatResponseDto>>;
+public sealed record ExecutePromptCommand(PromptDto Parameters, int WorkspaceId) : IRequest<Result<IEnumerable<ChatMessageDto>>>;
 
-public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand, Result<ChatResponseDto>>
+public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand, Result<IEnumerable<ChatMessageDto>>>
 {
     #region Members
     private readonly IAIManager aiManager;
@@ -37,118 +41,63 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
     }
     #endregion
 
-    public async Task<Result<ChatResponseDto>> Handle(ExecutePromptCommand request, CancellationToken cancellationToken)
+    public async Task<Result<IEnumerable<ChatMessageDto>>> Handle(ExecutePromptCommand request, CancellationToken cancellationToken)
     {
+        // Authorization check
         var canAccessWorkspace = await authorizationService.CanAccessWorkspace(request.WorkspaceId, cancellationToken);
         if (!canAccessWorkspace)
         {
-            return Result<ChatResponseDto>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
+            return Result<IEnumerable<ChatMessageDto>>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
         }
 
+        // Ensure default provider exist
         var defaultProvider = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.API, cancellationToken);
         if (defaultProvider is null)
         {
-            return Result<ChatResponseDto>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
+            return Result<IEnumerable<ChatMessageDto>>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
         }
+
+        var currentUserId = currentUserService.GetId();
 
         var prompt = request.Parameters.Prompt;
 
-        var history = new ChatHistory();
+        // Load previous chat history
+        var history = aiManager.BuildChatHistory(request.Parameters.History);
+
+        var systemMessage = await PromptLoader.LoadPromptAsync("execute-registered-functions-system.txt");
+        systemMessage = string.Format(systemMessage, DateTime.UtcNow);
+
+        // Prepend system message so it's first
+        history.Insert(0, new ChatMessageContent(AuthorRole.System, systemMessage));
+
+        // Add user message
         history.AddUserMessage(prompt);
 
-         var systemMessage = await PromptLoader.LoadPromptAsync("execute-registered-functions-system.txt");
-         history.AddSystemMessage(systemMessage);
-
+        // Build kernel + functions
         var kernel = kernelPluginService.GetKernel(request.WorkspaceId, defaultProvider.Id).Kernel;
-
         var functions = kernel.Plugins.SelectMany(p => p);
 
-        var allMessages = new List<ChatMessageDto>();
-
-        var result = await aiManager.GetChatCompletionAsync(history, executionSettings: new()
-            {
-                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(functions)
-            }, kernel: kernel, cancellationToken: cancellationToken);
-
-        string responseText = result.Content ?? string.Empty;
-
-        // Add main history
-        allMessages.AddRange(history.Where(x => x.Role != AuthorRole.System).Select(m => new ChatMessageDto
+        var execSettings = new OpenAIPromptExecutionSettings
         {
-            Role = m.Role.ToString(),
-            Content = m.Content ?? string.Empty
-        }));
-
-        if (responseText.Contains("No suitable function available", StringComparison.OrdinalIgnoreCase))
-        {
-            responseText = await ExecuteDefaultSqlFallbackFunction(allMessages, request.WorkspaceId, prompt, cancellationToken) ?? responseText;
-        }
-
-        var dto = new ChatResponseDto
-        {
-            LatestResult = responseText ?? string.Empty,
-            Messages = allMessages
+            FunctionChoiceBehavior = kernel is not null && functions.Any() ? FunctionChoiceBehavior.Auto(functions) : FunctionChoiceBehavior.None()
         };
 
-        return Result<ChatResponseDto>.CreateSuccess(dto);
+        // Run AI
+        await aiManager.ExecutePrompt(history, execSettings, kernel, cancellationToken);
+
+        // Convert ChatHistory (with trimming)
+        var messagesToSave = aiManager.BuildChatMessages(request.WorkspaceId, currentUserId,  history);
+
+        // Build messages for DTO (skip system)
+        var allMessages = history
+          .Where(x => x.Role != AuthorRole.System && x.Role != AuthorRole.Tool)
+          .Select(m => new ChatMessageDto
+          {
+              Role = m.Role.ToString(),
+              Content = m.Content ?? string.Empty
+          })
+          .ToList();
+
+        return Result<IEnumerable<ChatMessageDto>>.CreateSuccess(allMessages);
     }
-
-    #region Private Methods
-    private async Task<string> ExecuteDefaultSqlFallbackFunction(List<ChatMessageDto> allMessages, int workspaceId, string prompt, CancellationToken cancellationToken)
-    {
-        allMessages.AddRange(new ChatMessageDto
-        {
-            Role = AuthorRole.Assistant.ToString(),
-            Content = "No suitable function available, will try to generate sql query using configured database schema, if exists."
-        });
-
-        kernelPluginService.RegisterDefaultSqlFunction(workspaceId);
-        var sqlKernel = kernelPluginService.GetDefaultKernel(workspaceId).Kernel;
-        var defaultFunctions = sqlKernel.Plugins.SelectMany(p => p);
-
-        var sqlHistory = new ChatHistory();
-        sqlHistory.AddUserMessage(prompt);
-
-        var sqlResult = await aiManager.GetChatCompletionAsync(sqlHistory, executionSettings: new()
-        {
-            FunctionChoiceBehavior = FunctionChoiceBehavior.Required(defaultFunctions)
-        }, kernel: sqlKernel, cancellationToken: cancellationToken);
-
-        // Capture assistant messages (but skip tool unless error)
-        foreach (var msg in sqlHistory)
-        {
-            if (msg.Role == AuthorRole.User)
-            {
-                continue;
-            }
-
-            if (msg.Role == AuthorRole.Tool)
-            {
-                var toolOutput = msg.Content ?? string.Empty;
-
-                // only show if it looks like an error
-                if (toolOutput.Contains("error", StringComparison.OrdinalIgnoreCase) ||
-                    toolOutput.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
-                    toolOutput.Contains("cannot", StringComparison.OrdinalIgnoreCase))
-                {
-                    allMessages.Add(new ChatMessageDto
-                    {
-                        Role = msg.Role.ToString(),
-                        Content = toolOutput
-                    });
-                }
-            }
-            else
-            {
-                allMessages.Add(new ChatMessageDto
-                {
-                    Role = msg.Role.ToString(),
-                    Content = msg.Content ?? string.Empty
-                });
-            }
-        }
-
-        return sqlResult.Content;
-    }
-    #endregion
 }

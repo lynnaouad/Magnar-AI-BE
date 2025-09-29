@@ -46,6 +46,15 @@ public partial class Program
                 };
             });
 
+        builder.Services.AddHttpClient("fastFailClient")
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                return new SocketsHttpHandler
+                {
+                    ConnectTimeout = TimeSpan.FromSeconds(10), // only applies to DNS/TCP connect
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2) // optional
+                };
+            });
 
         // Semantic Kernel + OpenAI
         var openAIConf = builder.Configuration.GetSection("OpenAIConfiguration");

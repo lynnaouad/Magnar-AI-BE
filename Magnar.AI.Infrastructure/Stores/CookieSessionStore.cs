@@ -1,4 +1,4 @@
-﻿using Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Magnar.AI.Application.Interfaces.Stores;
 using System.Collections.Concurrent;
 using System.Net;
 

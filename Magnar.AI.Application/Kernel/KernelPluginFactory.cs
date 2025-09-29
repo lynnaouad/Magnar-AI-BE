@@ -1,13 +1,10 @@
-﻿using Duende.IdentityServer.Models;
-using Magnar.AI.Application.Dto.Providers;
+﻿using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Features.DatabaseSchema.Commands;
-using Magnar.AI.Application.Helpers;
-using Magnar.AI.Application.Interfaces.Infrastructure;
-using Magnar.AI.Domain.Entities;
+using Magnar.AI.Application.Interfaces.Stores;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Newtonsoft.Json;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -47,14 +44,14 @@ namespace Magnar.AI.Application.Kernel
         /// <param name="workspaceId">Workspace identifier for schema context.</param>
         /// <param name="mediator">Mediator instance used to dispatch the SQL generation command.</param>
         /// <returns>A KernelFunction that produces SQL and executes it when no plugin matches.</returns>
-        public static KernelFunction CreateFallbackSqlFunction(int workspaceId, IMediator mediator)
+        public static KernelFunction CreateFallbackSqlFunction(int workspaceId, IServiceScopeFactory scopeFactory)
         {
             try
             {
                 return KernelFunctionFactory.CreateFromMethod(
-                    (Func<KernelArguments, Task<string>>)(args => ExecuteFallbackSqlFunction(workspaceId, args, mediator)),
-                       functionName: Constants.KernelFunctionNames.DefaultQueryGenerator,
-                       description: "Generates and executes a SQL query based on schema and user prompt if no plugin matches.",
+                    (Func<KernelArguments, Task<string>>)(args => ExecuteFallbackSqlFunction(workspaceId, args, scopeFactory)),
+                       functionName: "NoSuitableFunction",
+                       description: "Generates and executes a SQL query based on schema and user prompt. Call this when no function matches the user request.",
                        parameters:
                         [
                             new KernelParameterMetadata("prompt")
@@ -80,7 +77,7 @@ namespace Magnar.AI.Application.Kernel
             {
                 var httpClient = authDetails.AuthType == AuthType.CookieSession
                     ? cookieStore.CreateClientWithCookies(api.ProviderId)
-                    : httpClientFactory.CreateClient();
+                    : httpClientFactory.CreateClient("fastFailClient");
 
                 // build request (first attempt)
                 var request = BuildRequest(api, args);
@@ -126,8 +123,11 @@ namespace Magnar.AI.Application.Kernel
         /// Executes the fallback SQL assistant: generates a SQL query from a user prompt
         /// and executes it via the mediator pipeline.
         /// </summary>
-        private static async Task<string> ExecuteFallbackSqlFunction(int workspaceId, KernelArguments args, IMediator mediator)
+        private static async Task<string> ExecuteFallbackSqlFunction(int workspaceId, KernelArguments args, IServiceScopeFactory scopeFactory)
         {
+            using var scope = scopeFactory.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
             var prompt = args["prompt"]?.ToString() ?? string.Empty;
 
             var result = await mediator.Send(new GenerateAndExecuteSqlQueryCommand(prompt, workspaceId), default);

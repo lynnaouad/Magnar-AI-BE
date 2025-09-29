@@ -2,8 +2,7 @@
 // Copyright (c) Magnar Systems. All rights reserved.
 // </copyright>
 
-using Magnar.AI.Application.Models;
-using Microsoft.AspNetCore.Http;
+using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace Magnar.AI.Application.Models.Responses.AI;
 
@@ -14,4 +13,6 @@ public class ChatCompletionResponse
     public string Content { get; set; } = string.Empty;
 
     public Error Error { get; set; } = new Error(Constants.Errors.ErrorOccured);
+
+    public ChatMessageContentItemCollection Items { get; set; } = [];
 }

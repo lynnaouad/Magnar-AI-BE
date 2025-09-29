@@ -1,7 +1,7 @@
 ﻿using Magnar.AI.Application.Dto.Providers;
-using Magnar.AI.Application.Helpers;
-using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
+using Magnar.AI.Application.Interfaces.Stores;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Magnar.AI.Application.Kernel
 {
@@ -25,13 +25,16 @@ namespace Magnar.AI.Application.Kernel
         private readonly IHttpClientFactory httpClientFactory;
 
         private readonly ICookieSessionStore cookieStore;
+
+        private readonly IServiceScopeFactory scopeFactory;
         #endregion
 
         #region Constructor
-        public KernelPluginManager(IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
+        public KernelPluginManager(IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore, IServiceScopeFactory scopeFactory)
         {
             this.httpClientFactory = httpClientFactory;
             this.cookieStore = cookieStore;
+            this.scopeFactory = scopeFactory;
         }
         #endregion
 
@@ -72,7 +75,7 @@ namespace Magnar.AI.Application.Kernel
                 return registry;
             }
 
-            registry.RegisterApiPlugins(apis, authDetails, httpClientFactory, cookieStore);
+            registry.RegisterApiPlugins(workspaceId, apis, authDetails, httpClientFactory, cookieStore, scopeFactory);
 
             var key = (workspaceId, providerId);
 

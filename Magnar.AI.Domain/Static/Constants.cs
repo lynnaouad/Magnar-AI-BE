@@ -298,4 +298,18 @@ public static class Constants
     {
         public const string DefaultPlugin = "DefaultPlugin";
     }
+
+    public static class AiModels 
+    {
+        public const string Gpt4o = "gpt-4o";
+        public const string Gpt41 = "gpt-4.1";
+        public const string Gpt4 = "gpt-4";
+        public const string Gpt35 = "gpt-3.5";
+        public const string Gpt4omini = "gpt-4o-mini";
+
+        public const string Davinci = "davinci";
+        public const string Curie = "curie";
+        public const string Babbage = "babbage";
+        public const string Ada = "ada";
+    }
 }

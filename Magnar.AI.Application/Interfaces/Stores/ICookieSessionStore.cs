@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Magnar.AI.Application.Interfaces.Infrastructure
+namespace Magnar.AI.Application.Interfaces.Stores
 {
     public interface ICookieSessionStore
     {

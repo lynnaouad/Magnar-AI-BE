@@ -1,4 +1,4 @@
-﻿using Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Magnar.AI.Application.Interfaces.Stores;
 
 namespace Magnar.AI.Infrastructure.Stores
 {

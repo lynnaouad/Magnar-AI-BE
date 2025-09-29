@@ -9,12 +9,6 @@ namespace Magnar.AI.Application.Interfaces.Services
 
         void RemoveApiPlugin(int workspaceId, int providerId, string pluginName);
 
-        void RemoveDefaultPlugin(int workspaceId, string pluginName);
-
         KernelPluginRegistry GetKernel(int workspaceId, int providerId);
-
-        KernelPluginRegistry GetDefaultKernel(int workspaceId);
-
-        void RegisterDefaultSqlFunction(int workspaceId);
     }
 }

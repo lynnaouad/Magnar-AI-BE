@@ -1,5 +1,0 @@
-﻿User request:
-{0}
-
-Remember:  
-- Only use provided schema context. Never invent tables or columns, use the columns defined in the table schema.

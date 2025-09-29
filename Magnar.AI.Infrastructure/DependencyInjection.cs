@@ -1,5 +1,6 @@
 ﻿using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
+using Magnar.AI.Application.Interfaces.Stores;
 using Magnar.AI.Infrastructure.Interceptors;
 using Magnar.AI.Infrastructure.Managers;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
