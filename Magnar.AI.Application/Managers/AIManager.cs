@@ -140,7 +140,7 @@ public class AIManager : IAIManager
                 {
                     // Resolve plugin + function
                     var (pluginName, functionName) = SplitFunctionName(toolCall.FunctionName);
-                    var function = kernel.Plugins.GetFunction(pluginName, functionName);
+                    var function = kernel?.Plugins.GetFunction(pluginName, functionName);
 
                     if (function is null)
                     {
@@ -150,7 +150,7 @@ public class AIManager : IAIManager
 
                     // Build KernelArguments
                     var arguments = new KernelArguments();
-                    foreach (var kv in toolCall.Arguments)
+                    foreach (var kv in toolCall?.Arguments ?? [])
                     {
                         arguments[kv.Key] = kv.Value?.ToString() ?? string.Empty;
                     }
@@ -167,7 +167,6 @@ public class AIManager : IAIManager
                 }
             }
         }
-
     }   
    
     public IEnumerable<ChatMessageDto> BuildChatMessages(int workspaceId, int userId, ChatHistory history)

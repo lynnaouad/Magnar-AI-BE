@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml.Spreadsheet;
 using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Dto.Schema;
+using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Models;
@@ -55,7 +56,7 @@ namespace Magnar.AI.Infrastructure.Managers
             }
 
             // Build connection string
-            var connectionString = unitOfWork.ProviderRepository.BuildSqlServerConnectionString(connection);
+            var connectionString = Utilities.BuildSqlServerConnectionString(connection);
 
             var tables = new List<TableDto>();
 
@@ -66,41 +67,46 @@ namespace Magnar.AI.Infrastructure.Managers
                 await conn.OpenAsync(cancellationToken);
 
                 string sql = @"
-SELECT 
-    t.TABLE_SCHEMA AS SchemaName,
-    t.TABLE_NAME AS TableName,
-    '[' + t.TABLE_SCHEMA + '].[' + t.TABLE_NAME + ']' AS FullName,
-    '[' + c.COLUMN_NAME + ']' AS ColumnName,
-    c.DATA_TYPE AS DataType,
-    CASE WHEN c.IS_NULLABLE = 'YES' THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsNullable,
-    CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsPrimaryKey,
-    CASE WHEN fk.parent_column_id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsForeignKey,
-    ISNULL('[' + rs.name + '].['+ rt.name+ ']', '') AS ForeignKeyReferencedTable
-FROM INFORMATION_SCHEMA.TABLES t
-INNER JOIN INFORMATION_SCHEMA.COLUMNS c 
-    ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
-LEFT JOIN (
-    SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
-    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
-    JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
-        ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
-    WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
-) pk
-    ON c.TABLE_SCHEMA = pk.TABLE_SCHEMA AND c.TABLE_NAME = pk.TABLE_NAME AND c.COLUMN_NAME = pk.COLUMN_NAME
--- Join to sys.foreign_key_columns to find foreign key columns
-LEFT JOIN sys.tables t2
-    ON t2.name = t.TABLE_NAME AND SCHEMA_NAME(t2.schema_id) = t.TABLE_SCHEMA
-LEFT JOIN sys.columns c2
-    ON c2.object_id = t2.object_id AND c2.name = c.COLUMN_NAME
-LEFT JOIN sys.foreign_key_columns fk
-    ON fk.parent_object_id = t2.object_id AND fk.parent_column_id = c2.column_id
--- Join to referenced table and schema
-LEFT JOIN sys.tables rt
-    ON rt.object_id = fk.referenced_object_id
-LEFT JOIN sys.schemas rs
-    ON rs.schema_id = rt.schema_id
-WHERE t.TABLE_TYPE = 'BASE TABLE'
-ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME, c.ORDINAL_POSITION;
+SELECT
+*
+FROM
+(
+    SELECT DISTINCT
+        t.TABLE_SCHEMA AS SchemaName,
+        t.TABLE_NAME AS TableName,
+        '[' + t.TABLE_SCHEMA + '].[' + t.TABLE_NAME + ']' AS FullName,
+        '[' + c.COLUMN_NAME + ']' AS ColumnName,
+        c.DATA_TYPE AS DataType,
+        CASE WHEN c.IS_NULLABLE = 'YES' THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsNullable,
+        CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsPrimaryKey,
+        CASE WHEN fk.parent_column_id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsForeignKey,
+        ISNULL('[' + rs.name + '].['+ rt.name+ ']', '') AS ForeignKeyReferencedTable
+    FROM INFORMATION_SCHEMA.TABLES t
+    INNER JOIN INFORMATION_SCHEMA.COLUMNS c 
+        ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
+    LEFT JOIN (
+        SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
+        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+        JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+            ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+        WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+    ) pk
+        ON c.TABLE_SCHEMA = pk.TABLE_SCHEMA AND c.TABLE_NAME = pk.TABLE_NAME AND c.COLUMN_NAME = pk.COLUMN_NAME
+    -- Join to sys.foreign_key_columns to find foreign key columns
+    LEFT JOIN sys.tables t2
+        ON t2.name = t.TABLE_NAME AND SCHEMA_NAME(t2.schema_id) = t.TABLE_SCHEMA
+    LEFT JOIN sys.columns c2
+        ON c2.object_id = t2.object_id AND c2.name = c.COLUMN_NAME
+    LEFT JOIN sys.foreign_key_columns fk
+        ON fk.parent_object_id = t2.object_id AND fk.parent_column_id = c2.column_id
+    -- Join to referenced table and schema
+    LEFT JOIN sys.tables rt
+        ON rt.object_id = fk.referenced_object_id
+    LEFT JOIN sys.schemas rs
+        ON rs.schema_id = rt.schema_id
+    WHERE t.TABLE_TYPE = 'BASE TABLE'
+) f1
+ORDER BY f1.SchemaName, f1.TableName;
                     ";
 
                 await using var cmd = new SqlCommand(sql, conn);

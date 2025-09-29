@@ -1,3 +1,4 @@
+using Magnar.AI.Application.Dto.ApiKeys;
 using Magnar.AI.Application.Features.ApiKeys.Commands;
 using Magnar.AI.Application.Features.ApiKeys.Queries;
 using Magnar.AI.Domain.Entities;

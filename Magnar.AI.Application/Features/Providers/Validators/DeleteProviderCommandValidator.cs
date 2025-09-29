@@ -17,7 +17,7 @@ public class DeleteProviderCommandValidator : AbstractValidator<DeleteProviderCo
         RuleFor(x => x.Id)
            .MustAsync(async (id, cancellation) =>
            {
-               var exist = await unitOfWork.ProviderRepository.GetAsync(id, false, cancellation);
+               var exist = await unitOfWork.ProviderRepository.GetProviderAsync(id, cancellation);
 
                return exist is not null;
            })

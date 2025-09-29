@@ -15,6 +15,18 @@ public class ProvidersController : BaseController
     }
 
     [HttpGet]
+    public async Task<IActionResult> GetAllAsync([FromQuery]ProviderFilterDto filters, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new GetProvidersQuery(filters), cancellationToken);
+        if (!result.Success)
+        {
+            return StatusCode(result.StatusCode, result.Errors);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpGet]
     [Route("{id}")]
     public async Task<IActionResult> GetAsync(int id, CancellationToken cancellationToken)
     {

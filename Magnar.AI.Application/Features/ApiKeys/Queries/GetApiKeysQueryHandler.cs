@@ -1,4 +1,5 @@
-﻿using Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Magnar.AI.Application.Dto.ApiKeys;
+using Magnar.AI.Application.Interfaces.Infrastructure;
 
 namespace Magnar.AI.Application.Features.ApiKeys.Queries
 {

@@ -35,7 +35,7 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 return Result.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
             }
 
-            var provider = mapper.Map<Provider>(request.Model);
+            var provider = request.Model;
 
             if (provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Any())
             {
@@ -52,9 +52,7 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
             await RemoveOldDefaultConnection(provider, cancellationToken);
 
-            unitOfWork.ProviderRepository.Update(provider);
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.ProviderRepository.UpdateProviderAsync(provider, cancellationToken);
 
             await unitOfWork.CommitTransactionAsync(cancellationToken);
 
@@ -65,33 +63,27 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
         #region Private Methods
 
-        private void UpdateRegisteredKernelApis(Provider provider)
+        private void UpdateRegisteredKernelApis(ProviderDto provider)
         {
-            if (provider.Type != ProviderTypes.API || provider.ApiProviderDetails is null)
+            if (provider.Type != ProviderTypes.API || provider.ApiProviderDetails is null || provider.Details?.ApiProviderAuthDetails is null)
             {
                 return;
             }
 
-            var mapped = mapper.Map<ProviderDto>(provider);
-            if (mapped.Details?.ApiProviderAuthDetails is null)
-            {
-                return;
-            }
-
-            kernelPluginService.RegisterApiFunctions(provider.WorkspaceId, provider.Id, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
+            kernelPluginService.RegisterApiFunctions(provider.WorkspaceId, provider.Id, provider.ApiProviderDetails, provider.Details.ApiProviderAuthDetails);
         }
 
-        public async Task RemoveOldDefaultConnection(Provider provider, CancellationToken cancellationToken)
+        public async Task RemoveOldDefaultConnection(ProviderDto provider, CancellationToken cancellationToken)
         {
             if (!provider.IsDefault)
             {
                 return;
             }
 
-            var existingDefaults = await unitOfWork.ProviderRepository.WhereAsync(x => x.Type == provider.Type
+            var existingDefaults = await unitOfWork.ProviderRepository.GetProvidersAsync(x => x.Type == provider.Type
                             && x.WorkspaceId == provider.WorkspaceId
                             && x.IsDefault
-                            && x.Id != provider.Id, false, cancellationToken);
+                            && x.Id != provider.Id, cancellationToken);
 
             if (existingDefaults.Any())
             {

@@ -2,6 +2,7 @@
 using Magnar.AI.Application.Interfaces.Managers;
 using Magnar.AI.Application.Interfaces.Stores;
 using Magnar.AI.Application.Kernel;
+using Magnar.AI.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Magnar.AI.Application.Services
@@ -25,7 +26,7 @@ namespace Magnar.AI.Application.Services
         }
         #endregion
 
-        public void RegisterApiFunctions(int workspaceId, int providerId, IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails)
+        public void RegisterApiFunctions(int workspaceId, int providerId, IEnumerable<ApiProviderDetailsDto> apis, ApiProviderAuthDetailsDto authDetails)
         {
             if (authDetails is null)
             {

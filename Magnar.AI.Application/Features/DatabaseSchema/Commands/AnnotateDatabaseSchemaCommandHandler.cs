@@ -45,7 +45,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 
         public async Task<Result> Handle(AnnotateDatabaseSchemaCommand request, CancellationToken cancellationToken)
         {
-            var provider = await unitOfWork.ProviderRepository.GetAsync(request.ProviderId, false, cancellationToken);
+            var provider = await unitOfWork.ProviderRepository.GetProviderAsync(request.ProviderId, cancellationToken);
             if (provider is null)
             {
                 return Result.CreateFailure([new(Constants.Errors.NotFound)]);

@@ -7,4 +7,6 @@ public class DashboardPromptDto
     public DashboardTypes ChartType { get; set; } = DashboardTypes.Pie;
 
     public int WorkspaceId { get; set; }
+
+    public int ProviderId { get; set; }
 }

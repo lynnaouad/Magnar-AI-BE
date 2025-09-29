@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Magnar.AI.Application.Dto.Providers
+﻿namespace Magnar.AI.Application.Dto.Providers
 {
     public class ProviderDetailsDto
     {

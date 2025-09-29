@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Magnar.AI.Infrastructure.Migrations
 {
     [DbContext(typeof(MagnarAIDbContext))]
-    [Migration("20250923111559_Initial")]
+    [Migration("20250929075532_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -64,6 +64,64 @@ namespace Magnar.AI.Infrastructure.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("UserGrants");
+                });
+
+            modelBuilder.Entity("Magnar.AI.Domain.Entities.ApiKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpiresUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("LastUsedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OwnerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime?>("RevokedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ScopesCsv")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("PublicId")
+                        .IsUnique();
+
+                    b.ToTable("ApiKey");
                 });
 
             modelBuilder.Entity("Magnar.AI.Domain.Entities.ApiProviderDetails", b =>
@@ -267,7 +325,7 @@ namespace Magnar.AI.Infrastructure.Migrations
 
                     b.HasIndex("WorkspaceId");
 
-                    b.HasIndex("Type", "IsDefault")
+                    b.HasIndex("Type", "IsDefault", "WorkspaceId")
                         .IsUnique()
                         .HasFilter("[IsDefault] = 1");
 
@@ -461,6 +519,17 @@ namespace Magnar.AI.Infrastructure.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("UserTokens", "idn");
+                });
+
+            modelBuilder.Entity("Magnar.AI.Domain.Entities.ApiKey", b =>
+                {
+                    b.HasOne("Magnar.AI.Domain.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Magnar.AI.Domain.Entities.ApiProviderDetails", b =>

@@ -18,6 +18,6 @@ namespace Magnar.AI.Application.Interfaces.Managers
         /// <summary>
         /// Completely rebuilds the kernel for a <paramref name="providerId"/> in a <paramref name="workspaceId"/> from the apis registered in DB.
         /// </summary>
-        KernelPluginRegistry RebuildKernel(int workspaceId, int providerId, IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails);
+        KernelPluginRegistry RebuildKernel(int workspaceId, int providerId, IEnumerable<ApiProviderDetailsDto> apis, ApiProviderAuthDetailsDto authDetails);
     }
 }

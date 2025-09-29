@@ -32,10 +32,12 @@ namespace Magnar.AI.Application.Dto.Providers
         public Mapping()
         {
             CreateMap<ProviderDto, Provider>()
-                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.Details != null ? JsonConvert.SerializeObject(src.Details) : null));
+                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.Details != null ? JsonConvert.SerializeObject(src.Details) : null))
+                .ForMember(dest => dest.ApiProviderDetails, opt => opt.MapFrom(src => src.ApiProviderDetails));
 
             CreateMap<Provider, ProviderDto>()
-                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.Details) ? JsonConvert.DeserializeObject<ProviderDetailsDto>(src.Details) : null));
+                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.Details) ? JsonConvert.DeserializeObject<ProviderDetailsDto>(src.Details) : null))
+                 .ForMember(dest => dest.ApiProviderDetails, opt => opt.MapFrom(src => src.ApiProviderDetails));
         }
     }
 }

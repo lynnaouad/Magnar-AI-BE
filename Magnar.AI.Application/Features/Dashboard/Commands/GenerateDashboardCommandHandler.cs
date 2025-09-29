@@ -48,22 +48,22 @@ public class GenerateDashboardCommandHandler : IRequestHandler<GenerateDashboard
             return Result<string>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
         }
 
-        var sqlConnection = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.Parameters.WorkspaceId, ProviderTypes.SqlServer, cancellationToken);
-        if (sqlConnection is null || sqlConnection?.Details?.SqlServerConfiguration is null)
-        {
-            return Result<string>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
-        }
-
-        var result = await mediator.Send(new GenerateAndExecuteSqlQueryCommand(request.Parameters.Prompt, request.Parameters.WorkspaceId, false, request.Parameters.ChartType), default);
+        var result = await mediator.Send(new GenerateAndExecuteSqlQueryCommand(request.Parameters.Prompt, request.Parameters.WorkspaceId, false, request.Parameters.ChartType, request.Parameters.ProviderId), default);
         if (!result.Success)
         {
             Log.Error(string.Join(',', result.Errors?.Select(x => x.Message) ?? []));
             return Result<string>.CreateFailure([new(Constants.Errors.CannotGenerateDashboard)]);
         }
 
+        var provider = await unitOfWork.ProviderRepository.GetProviderAsync(request.Parameters.ProviderId, cancellationToken);
+        if(provider is null || provider.Details?.SqlServerConfiguration is null)
+        {
+            return Result<string>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
+        }
+
         var aiResult = JsonSerializer.Deserialize<DatabaseSchemaSqlDto>(result.Value) ?? new DatabaseSchemaSqlDto();
 
-        var dashboard = dashboardManager.CreateDashboard(sqlConnection.Details.SqlServerConfiguration, aiResult.Sql, request.Parameters.ChartType, aiResult.Columns);
+        var dashboard = dashboardManager.CreateDashboard(provider.Details.SqlServerConfiguration, aiResult.Sql, request.Parameters.ChartType, aiResult.Columns);
 
         XDocument xdoc = dashboard.SaveToXDocument();
 

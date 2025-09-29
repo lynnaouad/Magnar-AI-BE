@@ -1,4 +1,5 @@
-﻿using Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Magnar.AI.Application.Dto.ApiKeys;
+using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Models.Responses;
 using Microsoft.AspNetCore.OData.Query;
 

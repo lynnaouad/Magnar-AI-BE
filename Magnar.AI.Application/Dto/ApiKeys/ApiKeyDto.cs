@@ -1,4 +1,4 @@
-﻿namespace Magnar.AI.Application.Dto
+﻿namespace Magnar.AI.Application.Dto.ApiKeys
 {
     public class ApiKeyDto
     {

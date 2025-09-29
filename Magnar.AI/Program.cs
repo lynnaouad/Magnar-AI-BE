@@ -145,19 +145,18 @@ public partial class Program
 
             foreach (var workspaceId in workspacesIds)
             {
-                var providers = await providerRepository.WhereAsync(x => x.WorkspaceId == workspaceId && x.Type == ProviderTypes.API, false, default);
+                var providers = await providerRepository.GetProvidersAsync(x => x.WorkspaceId == workspaceId && x.Type == ProviderTypes.API, default);
 
                 foreach (var provider in providers)
                 {
                     var mapped = mapper.Map<ProviderDto>(provider);
-                    var functions = await providerRepository.ApiProviderDetailsRepository.WhereAsync(x => x.ProviderId == provider.Id, false, default);
 
                     if (mapped.Details?.ApiProviderAuthDetails is null)
                     {
                         continue;
                     }
 
-                    manager.RebuildKernel(workspaceId, provider.Id, functions, mapped.Details.ApiProviderAuthDetails);
+                    manager.RebuildKernel(workspaceId, mapped.Id, mapped.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
                 }
             }
         }

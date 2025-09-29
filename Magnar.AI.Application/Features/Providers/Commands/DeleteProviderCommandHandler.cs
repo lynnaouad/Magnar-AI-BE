@@ -1,4 +1,5 @@
-﻿using Magnar.AI.Application.Interfaces.Infrastructure;
+﻿using Magnar.AI.Application.Dto.Providers;
+using Magnar.AI.Application.Interfaces.Infrastructure;
 using Microsoft.AspNetCore.Http;
 
 namespace Magnar.AI.Application.Features.Providers.Commands
@@ -42,20 +43,22 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
-            RemoveKernelApis(provider.WorkspaceId, provider.ApiProviderDetails.FirstOrDefault()?.PluginName ?? string.Empty, provider.Type, provider.Id);
+            RemoveKernelApis(provider);
 
             return Result.CreateSuccess();
         }
 
         #region Private Method
-        public void RemoveKernelApis(int workspaceId, string pluginName, ProviderTypes providerType, int providerId)
+        public void RemoveKernelApis(ProviderDto provider)
         {
-            if (providerType != ProviderTypes.API)
+            if (provider.Type != ProviderTypes.API)
             {
                 return;
             }
 
-            kernelPluginService.RemoveApiPlugin(workspaceId, providerId, pluginName);
+            var pluginName = provider.ApiProviderDetails.FirstOrDefault()?.PluginName ?? string.Empty;
+
+            kernelPluginService.RemoveApiPlugin(provider.WorkspaceId, provider.Id, pluginName);
         }
         #endregion
     }

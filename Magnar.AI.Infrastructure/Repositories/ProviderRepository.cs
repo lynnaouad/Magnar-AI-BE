@@ -1,12 +1,13 @@
 ﻿using AutoMapper;
 using Magnar.AI.Application.Dto.Providers;
-using Magnar.AI.Application.Models.Responses;
+using Magnar.AI.Application.Helpers;
 using Magnar.AI.Domain.Entities;
 using Magnar.AI.Domain.Static;
 using Magnar.AI.Infrastructure.Persistence.Contexts;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.OData.Query;
 using System.Data.SqlClient;
+using System.Linq.Expressions;
+using System.Threading;
 
 namespace Magnar.AI.Infrastructure.Repositories;
 
@@ -33,18 +34,30 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
 
     public async Task<ProviderDto> GetDefaultProviderAsync(int workspaceId, ProviderTypes providerType, CancellationToken cancellationToken)
     {
-        var provider = await context.Set<Provider>().FirstOrDefaultAsync(x => x.WorkspaceId == workspaceId && x.IsDefault && x.Type == providerType, cancellationToken: cancellationToken);
+        var provider = await context
+            .Set<Provider>()
+            .Include(provider => provider.ApiProviderDetails)
+            .FirstOrDefaultAsync(x => x.WorkspaceId == workspaceId && x.IsDefault && x.Type == providerType, cancellationToken: cancellationToken);
+       
         if (provider is null)
         {
             return null;
         }
 
-        return mapper.Map<ProviderDto>(provider);
+        var mappedProvider = mapper.Map<ProviderDto>(provider);
+
+        UnprotectProvider(mappedProvider);
+
+        return mappedProvider;
     }
 
     public async Task<ProviderDto> GetProviderAsync(int id, CancellationToken cancellationToken)
     {
-        var provider = await context.Set<Provider>().FirstOrDefaultAsync(x => x.Id == id, cancellationToken: cancellationToken);
+        var provider = await context
+            .Set<Provider>()
+            .Include(provider => provider.ApiProviderDetails)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken: cancellationToken);
+
         if (provider is null || string.IsNullOrEmpty(provider.Details))
         {
             return null;
@@ -52,25 +65,47 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
 
         var mappedProvider = mapper.Map<ProviderDto>(provider);
 
-        switch (provider.Type) 
-        {
-            case ProviderTypes.SqlServer:
-                {
-                    break;
-                }
-
-            case ProviderTypes.API:
-                {
-                    var apiDetails = context.Set<ApiProviderDetails>().Where(x => x.ProviderId == provider.Id);
-
-                    mappedProvider.ApiProviderDetails = mapper.Map<IEnumerable<ApiProviderDetailsDto>>(apiDetails);
-                    break;
-                }
-
-            default: break;
-        }
+        UnprotectProvider(mappedProvider);
 
         return mappedProvider;
+    }
+
+    public async Task<IEnumerable<Provider>> GetProvidersAsync(Expression<Func<Provider, bool>> filter, CancellationToken cancellationToken)
+    {
+        var providers = await context
+            .Set<Provider>()
+            .Include(provider => provider.ApiProviderDetails)
+            .Where(filter)
+            .ToListAsync(cancellationToken);
+
+        if (providers is null || providers.Count == 0)
+        {
+            return [];
+        }
+
+        return providers;
+    }
+
+    public async Task<int> CreateProviderAsync(ProviderDto provider, CancellationToken cancellationToken)
+    {
+        ProtectProvider(provider);
+
+        var toCreate = mapper.Map<Provider>(provider);
+
+        await context.Set<Provider>().AddAsync(toCreate, cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return toCreate.Id;
+    }
+
+    public async Task UpdateProviderAsync(ProviderDto provider, CancellationToken cancellationToken)
+    {
+        ProtectProvider(provider);
+
+        context.Set<Provider>().Update(mapper.Map<Provider>(provider));
+
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> TestSqlProviderAsync(SqlServerProviderDetailsDto details, CancellationToken cancellationToken)
@@ -80,7 +115,7 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
             return false;
         }
 
-        var connectionString = BuildSqlServerConnectionString(details);
+        var connectionString = Utilities.BuildSqlServerConnectionString(details);
 
         try
         {
@@ -95,38 +130,59 @@ public class ProviderRepository : BaseRepository<Provider>, IProviderRepository
         }
     }
 
-    public string BuildSqlServerConnectionString(SqlServerProviderDetailsDto details)
+    #region Private Methods
+
+    private void ProtectProvider(ProviderDto provider) => TransformProviderSecrets(provider, Protect);
+   
+    private void UnprotectProvider(ProviderDto provider) => TransformProviderSecrets(provider, Unprotect);
+
+    private void TransformProviderSecrets(ProviderDto provider, Func<string, string> transformer)
     {
-        if(details is null)
+        switch (provider.Type)
         {
-            return string.Empty;
+            case ProviderTypes.SqlServer:
+                if (!string.IsNullOrEmpty(provider.Details?.SqlServerConfiguration?.Password))
+                {
+                    provider.Details.SqlServerConfiguration.Password = transformer(provider.Details.SqlServerConfiguration.Password);
+                }
+                break;
+
+            case ProviderTypes.API:
+                var auth = provider.Details?.ApiProviderAuthDetails;
+                if (auth is null)
+                {
+                    break;
+                }
+
+                auth.ClientId = Transform(auth.ClientId, transformer);
+                auth.ClientSecret = Transform(auth.ClientSecret, transformer);
+                auth.Username = Transform(auth.Username, transformer);
+                auth.Password = Transform(auth.Password, transformer);
+                auth.ApiKeyValue = Transform(auth.ApiKeyValue, transformer);
+
+                break;
+        }
+    }
+
+    private string Transform(string field, Func<string, string> transformer)
+    {
+        if (!string.IsNullOrEmpty(field))
+        {
+            return transformer(field);
         }
 
-        var builder = new SqlConnectionStringBuilder
-        {
-            DataSource = details.InstanceName,
-            InitialCatalog = details.DatabaseName,
-            UserID = details.Username,
-            Password = details.Password,
-            TrustServerCertificate = true,
-            MultipleActiveResultSets = true,
-            ConnectTimeout = 30,
-        };
-
-        return builder.ConnectionString;
+        return field;
     }
 
-    public string ProtectPassword(string password)
+    private string Protect(string value)
     {
-        return protector.Protect(password);
+        return protector.Protect(value);
     }
 
-    public string UnprotectPassword(string protectedPassword)
+    private string Unprotect(string protectedValue)
     {
-        return protector.Unprotect(protectedPassword);
+        return protector.Unprotect(protectedValue);
     }
-
-    #region Private Methods
 
     #endregion
 }

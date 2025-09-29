@@ -1,7 +1,9 @@
 ﻿using FuzzySharp;
 using FuzzySharp.Extractor;
+using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Extensions;
 using Microsoft.AspNetCore.StaticFiles;
+using System.Data.SqlClient;
 
 namespace Magnar.AI.Application.Helpers;
 
@@ -182,5 +184,26 @@ public static class Utilities
         }
 
         return true;
+    }
+
+    public static string BuildSqlServerConnectionString(SqlServerProviderDetailsDto details)
+    {
+        if (details is null)
+        {
+            return string.Empty;
+        }
+
+        var builder = new SqlConnectionStringBuilder
+        {
+            DataSource = details.InstanceName,
+            InitialCatalog = details.DatabaseName,
+            UserID = details.Username,
+            Password = details.Password,
+            TrustServerCertificate = true,
+            MultipleActiveResultSets = true,
+            ConnectTimeout = 30,
+        };
+
+        return builder.ConnectionString;
     }
 }

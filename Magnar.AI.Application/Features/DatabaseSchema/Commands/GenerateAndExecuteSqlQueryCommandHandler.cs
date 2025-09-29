@@ -1,5 +1,5 @@
-﻿using DevExpress.Map.Native;
-using Magnar.AI.Application.Dto.AI.SemanticSearch;
+﻿using Magnar.AI.Application.Dto.AI.SemanticSearch;
+using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
@@ -11,7 +11,7 @@ using System.Text.Json;
 
 namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 {
-    public sealed record GenerateAndExecuteSqlQueryCommand(string Prompt, int WorkspaceId, bool ExecuteSql = true, DashboardTypes? ChartType = null) : IRequest<Result<string>>;
+    public sealed record GenerateAndExecuteSqlQueryCommand(string Prompt, int WorkspaceId, bool ExecuteSql = true, DashboardTypes? ChartType = null, int? ProviderId = null) : IRequest<Result<string>>;
 
     public class GenerateAndExecuteSqlQueryCommandHandler : IRequestHandler<GenerateAndExecuteSqlQueryCommand, Result<string>>
     {
@@ -35,15 +35,17 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
 
         public async Task<Result<string>> Handle(GenerateAndExecuteSqlQueryCommand request, CancellationToken cancellationToken)
         {
-            // Check connection
-            var sqlConnection = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.SqlServer, cancellationToken);
-            if (sqlConnection is null || sqlConnection?.Details?.SqlServerConfiguration is null)
+            var provider = request.ProviderId is not null && request.ProviderId != default
+                ? await unitOfWork.ProviderRepository.GetProviderAsync(request.ProviderId ?? 0, cancellationToken)
+                : await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.SqlServer, cancellationToken);
+
+            if (provider is null || provider?.Details?.SqlServerConfiguration is null || provider.WorkspaceId != request.WorkspaceId)
             {
                 return Result<string>.CreateSuccess("Failed! No default database provider configured!");
             }
 
             // Perform vector search to retrieve tables schema
-            var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ProviderId == sqlConnection.Id };
+            var options = new VectorSearchOptions<DatabaseSchemaEmbedding>() { Filter = x => x.ProviderId == provider.Id };
 
             VectorSearchResponse<DatabaseSchemaEmbedding> response = await vectorStore.VectorSearchAsync(request.Prompt, 15, options, cancellationToken);
             if (!response.Success || response.SearchResults is null || !response.SearchResults.Any())
@@ -87,7 +89,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
             {
                 try
                 {
-                    var connectionString = unitOfWork.ProviderRepository.BuildSqlServerConnectionString(sqlConnection.Details.SqlServerConfiguration);
+                    var connectionString = Utilities.BuildSqlServerConnectionString(provider.Details.SqlServerConfiguration);
 
                     var rows = await unitOfWork.ExecuteQueryAsync(result.Sql, connectionString, cancellationToken);
 
@@ -108,6 +110,17 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Commands
         }
 
         #region Private Methods
+        /// <summary>
+        /// Builds a system message string from the provided template that includes:
+        /// - The current UTC timestamp
+        /// - A JSON array of database schema records (limited by token budget)
+        /// - An optional chart type
+        ///
+        /// The method ensures that schema records are only included if they fit
+        /// within the model's maximum token limit. If adding a record would exceed
+        /// the limit, it stops including further records. The final message is then
+        /// formatted with the schema JSON and, if provided, the chart type.
+        /// </summary>
         private string BuildSchemaSystemMessage(string systemTemplate, DateTime utcNow, DashboardTypes? ChartType, IEnumerable<DatabaseSchemaEmbedding> records)
         {
             var ordered = records.ToList();

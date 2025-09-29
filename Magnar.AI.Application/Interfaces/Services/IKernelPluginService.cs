@@ -5,7 +5,7 @@ namespace Magnar.AI.Application.Interfaces.Services
 {
     public interface IKernelPluginService
     {
-        void RegisterApiFunctions(int workspaceId, int providerId, IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails);
+        void RegisterApiFunctions(int workspaceId, int providerId, IEnumerable<ApiProviderDetailsDto> apis, ApiProviderAuthDetailsDto authDetails);
 
         void RemoveApiPlugin(int workspaceId, int providerId, string pluginName);
 

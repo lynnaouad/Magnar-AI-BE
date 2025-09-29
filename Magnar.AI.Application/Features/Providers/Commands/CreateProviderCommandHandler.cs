@@ -1,9 +1,6 @@
 ﻿using Magnar.AI.Application.Dto.Providers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
-using Magnar.AI.Application.Interfaces.Services;
-using Magnar.AI.Domain.Entities;
 using Microsoft.AspNetCore.Http;
-using System.Threading;
 
 namespace Magnar.AI.Application.Features.Providers.Commands
 {
@@ -38,9 +35,9 @@ namespace Magnar.AI.Application.Features.Providers.Commands
                 return Result<int>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
             }
 
-            var provider = mapper.Map<Provider>(request.Model);
+            var provider = request.Model;
 
-            if (provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Count != 0)
+            if (provider.Type == ProviderTypes.API && provider.ApiProviderDetails.Any())
             {
                 provider.ApiProviderDetails = [.. provider.ApiProviderDetails.Select(x =>
                 {
@@ -55,9 +52,7 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
             await RemoveOldDefaultConnection(provider, cancellationToken);
 
-            await unitOfWork.ProviderRepository.CreateAsync(provider, cancellationToken);
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            provider.Id = await unitOfWork.ProviderRepository.CreateProviderAsync(provider, cancellationToken);
 
             await unitOfWork.CommitTransactionAsync(cancellationToken);
 
@@ -68,32 +63,26 @@ namespace Magnar.AI.Application.Features.Providers.Commands
 
         #region Private Methods
 
-        public void RegisterKernelApis(Provider provider)
+        public void RegisterKernelApis(ProviderDto provider)
         {
-            if(provider.Type != ProviderTypes.API || provider.ApiProviderDetails is null)
+            if(provider.Type != ProviderTypes.API || provider.ApiProviderDetails is null || provider.Details?.ApiProviderAuthDetails is null)
             {
                 return;
             }
 
-            var mapped = mapper.Map<ProviderDto>(provider);
-            if (mapped.Details?.ApiProviderAuthDetails is null)
-            {
-                return;
-            }
-
-            kernelPluginService.RegisterApiFunctions(provider.WorkspaceId, provider.Id, provider.ApiProviderDetails, mapped.Details.ApiProviderAuthDetails);
+            kernelPluginService.RegisterApiFunctions(provider.WorkspaceId, provider.Id, provider.ApiProviderDetails, provider.Details.ApiProviderAuthDetails);
         }
 
-        public async Task RemoveOldDefaultConnection(Provider provider, CancellationToken cancellationToken)
+        public async Task RemoveOldDefaultConnection(ProviderDto provider, CancellationToken cancellationToken)
         {
             if (!provider.IsDefault)
             {
                 return;
             }
 
-            var existingDefaults = await unitOfWork.ProviderRepository.WhereAsync(x => x.Type == provider.Type
+            var existingDefaults = await unitOfWork.ProviderRepository.GetProvidersAsync(x => x.Type == provider.Type
                             && x.WorkspaceId == provider.WorkspaceId
-                            && x.IsDefault, false, cancellationToken);
+                            && x.IsDefault, cancellationToken);
 
             if (existingDefaults.Any())
             {

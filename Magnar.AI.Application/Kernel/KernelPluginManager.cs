@@ -66,7 +66,7 @@ namespace Magnar.AI.Application.Kernel
         /// <param name="apis">A collection of API provider details to register as plugins.</param>
         /// <param name="authDetails">Authentication details for invoking API plugins.</param>
         /// <returns>A new <see cref="KernelPluginRegistry"/> containing the rebuilt plugins.</returns>
-        public KernelPluginRegistry RebuildKernel(int workspaceId, int providerId, IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails)
+        public KernelPluginRegistry RebuildKernel(int workspaceId, int providerId, IEnumerable<ApiProviderDetailsDto> apis, ApiProviderAuthDetailsDto authDetails)
         {
             var registry = CreateKernelPluginRegistry();
 

@@ -40,7 +40,7 @@ namespace Magnar.AI.Application.Kernel
         ///   and included in the corresponding plugin.  
         /// - This method allows registering multiple plugins in a single call.
         /// </remarks>
-        public void RegisterApiPlugins(int workspaceId, IEnumerable<ApiProviderDetails> apis, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore, IServiceScopeFactory scopeFactory)
+        public void RegisterApiPlugins(int workspaceId, IEnumerable<ApiProviderDetailsDto> apis, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore, IServiceScopeFactory scopeFactory)
         {
             if(apis is null || !apis.Any() || authDetails is null)
             {

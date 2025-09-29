@@ -2,13 +2,10 @@
 using Magnar.AI.Application.Helpers;
 using Magnar.AI.Application.Interfaces.Infrastructure;
 using Magnar.AI.Application.Interfaces.Managers;
-using Magnar.AI.Application.Interfaces.Stores;
-using Magnar.AI.Application.Stores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.SemanticKernel.Memory;
 
 namespace Magnar.Recruitment.Application.Features.Dashboard.Commands;
 
@@ -50,13 +47,6 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
             return Result<IEnumerable<ChatMessageDto>>.CreateFailure([new(Constants.Errors.Unauthorized)], StatusCodes.Status401Unauthorized);
         }
 
-        // Ensure default provider exist
-        var defaultProvider = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.API, cancellationToken);
-        if (defaultProvider is null)
-        {
-            return Result<IEnumerable<ChatMessageDto>>.CreateFailure([new(Constants.Errors.NoDefaultConnectionConfigured)]);
-        }
-
         var currentUserId = currentUserService.GetId();
 
         var prompt = request.Parameters.Prompt;
@@ -74,8 +64,10 @@ public class ExecutePromptCommandHandler : IRequestHandler<ExecutePromptCommand,
         history.AddUserMessage(prompt);
 
         // Build kernel + functions
-        var kernel = kernelPluginService.GetKernel(request.WorkspaceId, defaultProvider.Id).Kernel;
-        var functions = kernel.Plugins.SelectMany(p => p);
+        var defaultApiProvider = await unitOfWork.ProviderRepository.GetDefaultProviderAsync(request.WorkspaceId, ProviderTypes.API, cancellationToken);
+
+        var kernel = kernelPluginService.GetKernel(request.WorkspaceId, defaultApiProvider?.Id ?? 0)?.Kernel;
+        var functions = kernel?.Plugins.SelectMany(p => p) ?? [];
 
         var execSettings = new OpenAIPromptExecutionSettings
         {

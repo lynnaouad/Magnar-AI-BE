@@ -23,7 +23,7 @@ namespace Magnar.AI.Application.Kernel
         /// <param name="authDetails">Authentication details for the API provider.</param>
         /// <param name="httpClientFactory">Factory for creating HttpClient instances.</param>
         /// <returns>A KernelFunction that invokes the external API when called.</returns>
-        public static KernelFunction CreateApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
+        public static KernelFunction CreateApiFunction(ApiProviderDetailsDto api, ApiProviderAuthDetailsDto authDetails, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
         {
             try
             {
@@ -71,7 +71,7 @@ namespace Magnar.AI.Application.Kernel
         /// Executes an API call using the provided API definition, authentication, and arguments.
         /// Handles query parameters, route parameters, and request body.
         /// </summary>
-        private static async Task<string> ExecuteApiFunction(ApiProviderDetails api, ApiProviderAuthDetailsDto authDetails, KernelArguments args, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
+        private static async Task<string> ExecuteApiFunction(ApiProviderDetailsDto api, ApiProviderAuthDetailsDto authDetails, KernelArguments args, IHttpClientFactory httpClientFactory, ICookieSessionStore cookieStore)
         {
             try
             {
@@ -135,15 +135,13 @@ namespace Magnar.AI.Application.Kernel
             return result.Value;
         }
 
-        private static HttpRequestMessage BuildRequest(ApiProviderDetails api, KernelArguments args)
+        private static HttpRequestMessage BuildRequest(ApiProviderDetailsDto api, KernelArguments args)
         {
             var url = api.ApiUrl;
             var method = new HttpMethod(api.HttpMethod.ToString());
 
             // Route & query params
-            var parameters = string.IsNullOrWhiteSpace(api.ParametersJson)
-                ? []
-                : JsonConvert.DeserializeObject<List<ApiParameterDto>>(api.ParametersJson) ?? new();
+            var parameters = api?.Parameters ?? [];
 
             var queryParams = new List<string>();
 
@@ -185,16 +183,12 @@ namespace Magnar.AI.Application.Kernel
         /// Generates Semantic Kernel parameter metadata for each API parameter,
         /// including route, query, and body parameters.
         /// </summary>
-        private static IEnumerable<KernelParameterMetadata> BuildParameters(ApiProviderDetails api)
+        private static IEnumerable<KernelParameterMetadata> BuildParameters(ApiProviderDetailsDto api)
         {
-            if (!string.IsNullOrWhiteSpace(api.ParametersJson))
-            {
-                var parameters = JsonConvert.DeserializeObject<List<ApiParameterDto>>(api.ParametersJson);
-                if (parameters == null)
-                {
-                    yield break;
-                }
+            var parameters = api?.Parameters ?? [];
 
+            if (parameters.Any())
+            {
                 foreach (var p in parameters)
                 {
                     yield return new KernelParameterMetadata(p.Name)
@@ -207,7 +201,7 @@ namespace Magnar.AI.Application.Kernel
             }
 
             // Body params
-            if (!string.IsNullOrWhiteSpace(api.Payload))
+            if (!string.IsNullOrWhiteSpace(api?.Payload))
             {
                 yield return new KernelParameterMetadata("body")
                 {

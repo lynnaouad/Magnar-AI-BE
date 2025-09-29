@@ -28,7 +28,7 @@ namespace Magnar.AI.Application.Features.DatabaseSchema.Queries
 
         public async Task<Result<IEnumerable<TableDto>>> Handle(GetSelectedTablesQuery request, CancellationToken cancellationToken)
         {
-            var provider = await unitOfWork.ProviderRepository.GetAsync(request.ProviderId, false, cancellationToken);
+            var provider = await unitOfWork.ProviderRepository.GetProviderAsync(request.ProviderId, cancellationToken);
             if(provider is null)
             {
                 return Result<IEnumerable<TableDto>>.CreateFailure([new(Constants.Errors.NotFound)]);
